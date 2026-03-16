@@ -6,6 +6,7 @@ Built with FastAPI + SQLAlchemy
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, Date, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -1645,10 +1646,28 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
 
 @app.get("/")
 def root():
-    """Health check endpoint"""
+    """Serve frontend entry point on root path."""
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
     return {
         "service": "Student Management Portal",
         "version": "3.0",
         "status": "running",
         "assistant": "Intelligent Student Assistant"
     }
+
+
+@app.get("/script.js")
+def serve_script():
+    """Serve frontend JavaScript bundle."""
+    if os.path.exists("script.js"):
+        return FileResponse("script.js")
+    raise HTTPException(status_code=404, detail="script.js not found")
+
+
+@app.get("/index.html")
+def serve_index_file():
+    """Serve frontend HTML explicitly."""
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    raise HTTPException(status_code=404, detail="index.html not found")
