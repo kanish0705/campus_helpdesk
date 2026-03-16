@@ -508,6 +508,21 @@ def resource_visible_for_user(resource: Resource, user: User) -> bool:
     sem_match = resource.sem in [0, user.sem]
     return dept_match and section_match and sem_match
 
+
+def normalize_excel_header(header_value: Any) -> str:
+    """Normalize Excel header text into a comparable snake_case-like token."""
+    if header_value is None:
+        return ""
+    header = str(header_value).strip().lower()
+    return "".join(ch if ch.isalnum() else "_" for ch in header).strip("_")
+
+
+def coalesce_header_index(headers: List[str], aliases: List[str]) -> Optional[int]:
+    for alias in aliases:
+        if alias in headers:
+            return headers.index(alias)
+    return None
+
 def get_student_attendance(db: Session, email: str, threshold: float = 75.0) -> AttendanceResponse:
     """
     Comprehensive attendance calculation for a student.
@@ -1400,48 +1415,82 @@ async def upload_timetable_excel(
     if not rows:
         raise HTTPException(status_code=400, detail="Excel is empty")
 
-    headers = [str(cell).strip().lower() if cell is not None else "" for cell in rows[0]]
+    headers = [normalize_excel_header(cell) for cell in rows[0]]
     created = 0
 
-    if "day_of_week" in headers and "period_slots" in headers:
-        needed = ["day_of_week", "period_slots", "subject_name", "room_number", "dept", "section", "sem"]
-        if not all(name in headers for name in needed):
-            raise HTTPException(status_code=400, detail=f"Missing headers for row format. Required: {', '.join(needed)}")
+    day_idx = coalesce_header_index(headers, ["day_of_week", "day", "weekday"])
+    time_idx = coalesce_header_index(headers, ["period_slots", "period_slot", "time", "time_slot", "timeslot"])
 
-        idx = {name: headers.index(name) for name in headers if name}
+    if day_idx is not None and time_idx is not None:
+        subject_idx = coalesce_header_index(headers, ["subject_name", "subject", "course", "course_name"])
+        room_idx = coalesce_header_index(headers, ["room_number", "room", "classroom", "location"])
+        dept_idx = coalesce_header_index(headers, ["dept", "department"])
+        section_idx = coalesce_header_index(headers, ["section"])
+        sem_idx = coalesce_header_index(headers, ["sem", "semester"])
+        faculty_idx = coalesce_header_index(headers, ["faculty_name", "faculty", "teacher", "staff_name"])
+        resource_idx = coalesce_header_index(headers, ["resource_details", "resource", "resources", "notes"])
+
+        required_names = []
+        if subject_idx is None:
+            required_names.append("subject_name|subject")
+        if room_idx is None:
+            required_names.append("room_number|room")
+        if dept_idx is None:
+            required_names.append("dept|department")
+        if section_idx is None:
+            required_names.append("section")
+        if sem_idx is None:
+            required_names.append("sem|semester")
+        if required_names:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Missing headers for row format. Required aliases include: "
+                    + ", ".join(required_names)
+                )
+            )
+
         for row in rows[1:]:
-            if not row or row[idx["day_of_week"]] is None:
+            if not row or row[day_idx] is None:
                 continue
-            dept = str(row[idx["dept"]]).strip()
-            section = str(row[idx["section"]]).strip()
-            sem = int(row[idx["sem"]] or 0)
+            dept = str(row[dept_idx]).strip()
+            section = str(row[section_idx]).strip()
+            sem = int(row[sem_idx] or 0)
             assert_role_barrier(admin, dept, section)
 
             db.add(Timetable(
-                day_of_week=str(row[idx["day_of_week"]]).strip(),
-                period_slots=str(row[idx["period_slots"]]).strip(),
-                subject_name=str(row[idx["subject_name"]]).strip(),
-                room_number=str(row[idx["room_number"]]).strip(),
-                faculty_name=str(row[idx.get("faculty_name", -1)]).strip() if idx.get("faculty_name") is not None and row[idx.get("faculty_name", 0)] else None,
-                resource_details=str(row[idx.get("resource_details", -1)]).strip() if idx.get("resource_details") is not None and row[idx.get("resource_details", 0)] else None,
+                day_of_week=str(row[day_idx]).strip(),
+                period_slots=str(row[time_idx]).strip(),
+                subject_name=str(row[subject_idx]).strip(),
+                room_number=str(row[room_idx]).strip(),
+                faculty_name=str(row[faculty_idx]).strip() if faculty_idx is not None and row[faculty_idx] else None,
+                resource_details=str(row[resource_idx]).strip() if resource_idx is not None and row[resource_idx] else None,
                 dept=dept,
                 section=section,
                 sem=sem
             ))
             created += 1
     else:
-        day_map = {"monday": "Monday", "tuesday": "Tuesday", "wednesday": "Wednesday", "thursday": "Thursday", "friday": "Friday", "saturday": "Saturday"}
-        if "time" not in headers:
-            raise HTTPException(status_code=400, detail="Matrix format requires first row header 'time'")
+        day_map = {
+            "monday": "Monday", "mon": "Monday",
+            "tuesday": "Tuesday", "tue": "Tuesday", "tues": "Tuesday",
+            "wednesday": "Wednesday", "wed": "Wednesday",
+            "thursday": "Thursday", "thu": "Thursday", "thurs": "Thursday",
+            "friday": "Friday", "fri": "Friday",
+            "saturday": "Saturday", "sat": "Saturday"
+        }
 
-        dept_idx = headers.index("dept") if "dept" in headers else None
-        section_idx = headers.index("section") if "section" in headers else None
-        sem_idx = headers.index("sem") if "sem" in headers else None
-        time_idx = headers.index("time")
-        day_indices = {day: headers.index(day) for day in day_map if day in headers}
+        time_idx = coalesce_header_index(headers, ["time", "period_slots", "period_slot", "time_slot", "timeslot"])
+        if time_idx is None:
+            raise HTTPException(status_code=400, detail="Matrix format requires header: time or period_slots")
+
+        dept_idx = coalesce_header_index(headers, ["dept", "department"])
+        section_idx = coalesce_header_index(headers, ["section"])
+        sem_idx = coalesce_header_index(headers, ["sem", "semester"])
+        day_indices = {header: headers.index(header) for header in headers if header in day_map}
 
         if not day_indices:
-            raise HTTPException(status_code=400, detail="Matrix format requires day columns: monday..saturday")
+            raise HTTPException(status_code=400, detail="Matrix format requires day columns: monday..saturday (or mon..sat)")
 
         for row in rows[1:]:
             if not row or row[time_idx] is None:
