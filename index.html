@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        brand: {
+                            primary: '#1e3a5f',
+                            secondary: '#2c5282',
+                            accent: '#ed8936',
+                            dark: '#1a202c',
+                        },
+                        status: {
+                            safe: '#10b981',
+                            warning: '#f59e0b',
+                            danger: '#ef4444',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Animations */
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .animate-slide-in { animation: slideIn 0.3s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite; }
+        
+        /* Striped table */
+        .table-striped tbody tr:nth-child(odd) { background-color: #f8fafc; }
+        .table-striped tbody tr:hover { background-color: #e2e8f0; }
+        
+        /* Attendance status colors */
+        .status-ring-safe { background: conic-gradient(from 0deg, #10b981 0deg, #10b981 251.2deg, #e5e7eb 251.2deg); }
+        .status-ring-warning { background: conic-gradient(from 0deg, #f59e0b 0deg, #f59e0b 251.2deg, #e5e7eb 251.2deg); }
+        .status-ring-danger { background: conic-gradient(from 0deg, #ef4444 0deg, #ef4444 251.2deg, #e5e7eb 251.2deg); }
+        
+        /* Chat bubble styling */
+        .chat-bubble-bot { background: #f1f5f9; border-bottom-left-radius: 4px; }
+        .chat-bubble-user { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border-bottom-right-radius: 4px; }
+        
+        /* Priority badges */
+        .priority-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .priority-high { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .priority-normal { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+        
+        /* Active nav item */
+        .nav-item.active { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; font-weight: 600; }
+        .nav-item.active i { color: #0284c7; }
+        
+        /* Mobile-first responsive */
+        @media (max-width: 1024px) {
+            .sidebar { position: fixed; left: -100%; transition: left 0.3s ease; }
+            .sidebar.open { left: 0; }
+            .main-content { margin-left: 0; }
+            .bottom-nav { display: flex; }
+            .desktop-only { display: none; }
+        }
+        
+        @media (min-width: 1025px) {
+            .mobile-nav { display: none !important; }
+            .desktop-only { display: block; }
+        }
+        
+        /* Quick Sync animation */
+        @keyframes sync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .syncing { animation: sync-pulse 1s infinite; }
+        
+        /* FAB positioning */
+        .fab-button { 
+            position: fixed;
+            bottom: 5rem;
+            right: 1.5rem;
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .fab-button { bottom: 6rem; }
+        }
+        
+        /* Announcement cards with image */
+        .announcement-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .announcement-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .announcement-image {
+            height: 200px;
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Login Section -->
+    <section id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary via-brand-secondary to-primary-600 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-slide-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-2xl mb-4 shadow-lg">
+                    <i class="fas fa-graduation-cap text-3xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Student Portal</h1>
+                <p class="text-gray-500 text-sm">College Management System</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="email" id="loginEmail" placeholder="student@college.edu" 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="loginPassword" placeholder="••••••••" onkeypress="handleLoginKeypress(event)"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition">
+                    </div>
+                </div>
+                <button onclick="login()" class="w-full py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                </button>
+            </div>
+            
+            <div class="mt-6 p-4 bg-gray-50 rounded-xl">
+                <p class="text-xs text-gray-600 font-semibold mb-2">📌 Demo Credentials:</p>
+                <div class="text-xs text-gray-600 space-y-1">
+                    <p><strong>Student:</strong> student1@college.edu / password123</p>
+                    <p><strong>Admin:</strong> admin@college.edu / admin123</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Dashboard -->
+    <div id="mainDashboard" class="hidden flex h-screen">
+        <!-- Desktop Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-40 desktop-only">
+            <div class="p-5 border-b border-gray-100">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-gray-800">Student Portal</h1>
+                        <p class="text-xs text-gray-500">Campus Portal</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button onclick="switchView('dashboard')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition active">
+                    <i class="fas fa-home w-5"></i><span>Dashboard</span>
+                </button>
+                <button onclick="switchView('schedule')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-calendar-alt w-5"></i><span>Schedule</span>
+                </button>
+                <button onclick="switchView('attendance')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-chart-pie w-5"></i><span>Attendance</span>
+                </button>
+                <button onclick="switchView('announcements')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-bullhorn w-5"></i><span>Announcements</span>
+                </button>
+                <button onclick="switchView('resources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                    <i class="fas fa-folder-open w-5"></i><span>Resources</span>
+                </button>
+                    
+                <!-- Admin Management Section -->
+                <div id="adminSection" class="hidden pt-4 mt-4 border-t border-gray-100">
+                    <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin</p>
+                    <button onclick="switchView('manage-timetable')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-table w-5"></i><span>Manage Timetable</span>
+                    </button>
+                    <button onclick="switchView('manage-announcements')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-megaphone w-5"></i><span>Manage Announcements</span>
+                    </button>
+                    <button onclick="switchView('manage-attendance')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-users-cog w-5"></i><span>Manage Attendance</span>
+                    </button>
+                    <button onclick="switchView('manage-resources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-folder-tree w-5"></i><span>Manage Resources</span>
+                    </button>
+                </div>
+            </nav>
+            
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p id="sidebarUserName" class="font-medium text-gray-800 truncate">Guest</p>
+                        <p id="sidebarUserRole" class="text-xs text-gray-500">Student</p>
+                    </div>
+                    <button onclick="logout()" class="p-2 text-gray-400 hover:text-red-500 transition" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav id="bottomNav" class="mobile-nav fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex justify-around py-2">
+            <button onclick="switchView('dashboard')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600 active">
+                <i class="fas fa-home text-xl mb-1"></i><span class="text-xs">Home</span>
+            </button>
+            <button onclick="switchView('schedule')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600">
+                <i class="fas fa-calendar-alt text-xl mb-1"></i><span class="text-xs">Schedule</span>
+            </button>
+            <button onclick="switchView('attendance')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600">
+                <i class="fas fa-chart-pie text-xl mb-1"></i><span class="text-xs">Attendance</span>
+            </button>
+            <button onclick="switchView('announcements')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600">
+                <i class="fas fa-bullhorn text-xl mb-1"></i><span class="text-xs">Updates</span>
+            </button>
+            <button onclick="switchView('resources')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600">
+                <i class="fas fa-folder-open text-xl mb-1"></i><span class="text-xs">Resources</span>
+            </button>
+            <button onclick="logout()" class="flex flex-col items-center py-2 px-4 text-gray-600 hover:text-red-600">
+                <i class="fas fa-sign-out-alt text-xl mb-1"></i><span class="text-xs">Logout</span>
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 lg:ml-64 mb-20 lg:mb-0 overflow-y-auto">
+            <!-- Top Header -->
+            <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
+                <div class="px-6 py-4 flex items-center justify-between">
+                    <div>
+                        <h2 id="pageTitle" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                        <p id="pageSubtitle" class="text-sm text-gray-500">Welcome back!</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openAdminScopeModal()" id="adminScopeBtn" class="hidden flex items-center space-x-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition font-medium text-sm">
+                            <i class="fas fa-filter"></i><span>Scope</span>
+                        </button>
+                        <button onclick="quickSync()" id="quickSyncBtn" class="flex items-center space-x-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition font-medium text-sm">
+                            <i class="fas fa-sync-alt"></i><span>Quick Sync</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Content Views -->
+            <div class="p-6">
+                <!-- Dashboard View -->
+                <div id="view-dashboard" class="view-content">
+                    <!-- Quick Stats Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-10 h-10 bg-gradient-to-br from-status-safe to-green-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-check-circle text-white"></i>
+                                </div>
+                            </div>
+                            <p class="text-gray-500 text-xs">Attendance</p>
+                            <p id="overallAttendance" class="text-2xl font-bold text-gray-800">---%</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-clock text-white"></i>
+                                </div>
+                            </div>
+                            <p class="text-gray-500 text-xs">Classes Today</p>
+                            <p id="todayClassCount" class="text-2xl font-bold text-gray-800">0</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-bell text-white"></i>
+                                </div>
+                            </div>
+                            <p class="text-gray-500 text-xs">Announcements</p>
+                            <p id="dashAnnouncementCount" class="text-2xl font-bold text-gray-800">0</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-star text-white"></i>
+                                </div>
+                            </div>
+                            <p class="text-gray-500 text-xs">Status</p>
+                            <p id="attendanceStatus" class="text-lg font-bold text-green-600">SAFE</p>
+                        </div>
+                    </div>
+
+                    <!-- Grid: Today's Schedule & Announcements -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Today's Schedule -->
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="p-6 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-800">
+                                    <i class="fas fa-calendar-day text-primary-500 mr-2"></i>Today's Schedule
+                                </h3>
+                            </div>
+                            <div id="todayScheduleContent" class="p-6">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                                    <p>Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Latest Announcements Preview -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="p-6 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-800">
+                                    <i class="fas fa-bullhorn text-amber-500 mr-2"></i>Latest
+                                </h3>
+                            </div>
+                            <div id="latestAnnouncementsContent" class="p-4 max-h-80 overflow-y-auto space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <p>Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schedule View (Timetable) -->
+                <div id="view-schedule" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-calendar-week text-primary-500 mr-2"></i>Weekly Timetable
+                            </h3>
+                        </div>
+                        <div class="p-6 overflow-x-auto">
+                            <table id="weeklyTimetable" class="w-full table-striped min-w-[900px]">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Monday</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tuesday</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Wednesday</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Thursday</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Friday</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Saturday</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timetableBody" class="divide-y divide-gray-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance View -->
+                <div id="view-attendance" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                        <div class="p-6">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Overall Attendance</h3>
+                                    <p class="text-gray-500 text-sm">Cumulative across all subjects</p>
+                                </div>
+                                <div class="mt-4 md:mt-0 flex items-center space-x-4">
+                                    <div id="attendanceCircle" class="relative w-24 h-24 flex-shrink-0">
+                                        <svg class="w-24 h-24 transform -rotate-90">
+                                            <circle cx="48" cy="48" r="40" stroke="#e2e8f0" stroke-width="8" fill="none"/>
+                                            <circle id="progressCircle" cx="48" cy="48" r="40" stroke="#10b981" stroke-width="8" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"/>
+                                        </svg>
+                                        <span id="circlePercentage" class="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-800">0%</span>
+                                    </div>
+                                    <div>
+                                        <span id="overallStatusBadge" class="px-4 py-2 rounded-xl text-white font-semibold bg-status-safe">SAFE</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject-wise Attendance -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-list text-primary-500 mr-2"></i>Subject Breakdown
+                            </h3>
+                        </div>
+                        <div id="subjectAttendanceContent" class="p-6">
+                            <div class="text-center py-8 text-gray-400">
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Announcements View -->
+                <div id="view-announcements" class="view-content hidden">
+                    <div id="announcementsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="col-span-full text-center py-12 text-gray-400">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                            <p>Loading announcements...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resources View -->
+                <div id="view-resources" class="view-content hidden">
+                    <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="col-span-full text-center py-12 text-gray-400">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                            <p>Loading resources...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Timetable -->
+                <div id="view-manage-timetable" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-calendar-plus text-primary-500 mr-2"></i>Manage Timetable
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <input id="timetableExcelInput" type="file" accept=".xlsx,.xls" class="hidden" onchange="uploadTimetableExcel()">
+                                <button onclick="document.getElementById('timetableExcelInput').click()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
+                                    <i class="fas fa-file-excel mr-2"></i>Upload Excel
+                                </button>
+                                <button onclick="loadAllTimetable()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">
+                                    <i class="fas fa-sync mr-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            <select id="newTtDay" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option>
+                            </select>
+                            <input id="newTtTime" type="text" placeholder="09:00-10:00" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtSubject" type="text" placeholder="Subject" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtRoom" type="text" placeholder="Room" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtFaculty" type="text" placeholder="Faculty (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtResource" type="text" placeholder="Resource details (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none md:col-span-2">
+                            <input id="newTtDept" type="text" placeholder="Dept" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtSection" type="text" placeholder="Section" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newTtSem" type="number" placeholder="Sem" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <button onclick="createTimetableEntry()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Add Entry
+                            </button>
+                        </div>
+                        <div id="timetableManagementContent" class="overflow-x-auto">
+                            <table class="w-full table-striped">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Day</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Subject</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Room</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Resources</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dept/Section</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timetableManagementBody" class="divide-y divide-gray-100">
+                                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Announcements -->
+                <div id="view-manage-announcements" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-bullhorn text-amber-500 mr-2"></i>Manage Announcements
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <input id="announcementExcelInput" type="file" accept=".xlsx,.xls" class="hidden" onchange="uploadAnnouncementsExcel()">
+                                <button onclick="document.getElementById('announcementExcelInput').click()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
+                                    <i class="fas fa-file-excel mr-2"></i>Upload Excel
+                                </button>
+                                <button onclick="loadAllAnnouncements()" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition text-sm">
+                                    <i class="fas fa-sync mr-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <input id="newAnnTitle" type="text" placeholder="Announcement title" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                <input id="newAnnImage" type="text" placeholder="Image URL (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            </div>
+                            <textarea id="newAnnBody" rows="3" placeholder="Announcement content" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></textarea>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <select id="newAnnPriority" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option>
+                                </select>
+                                <select id="newAnnTargetDepts" multiple class="px-3 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="CSE">CSE</option><option value="ECE">ECE</option><option value="ME">ME</option>
+                                </select>
+                                <select id="newAnnTargetSections" multiple class="px-3 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                                </select>
+                                <select id="newAnnTargetSemesters" multiple class="px-3 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="1">Sem 1</option><option value="2">Sem 2</option><option value="3">Sem 3</option><option value="4">Sem 4</option><option value="5">Sem 5</option><option value="6">Sem 6</option><option value="7">Sem 7</option><option value="8">Sem 8</option>
+                                </select>
+                            </div>
+                            <p class="text-xs text-gray-500">Click options to toggle multiple selections. If none selected, target is treated as all.</p>
+                            <button onclick="createAnnouncement()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Post Announcement
+                            </button>
+                        </div>
+                        <div id="announcementManagementContent" class="p-6">
+                            <div id="announcementManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="col-span-full text-center py-12 text-gray-400">
+                                    <p>Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Attendance -->
+                <div id="view-manage-attendance" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-users text-purple-500 mr-2"></i>Manage Attendance
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <input id="attendanceExcelInput" type="file" accept=".xlsx,.xls" class="hidden" onchange="uploadAttendanceExcel()">
+                                <button onclick="document.getElementById('attendanceExcelInput').click()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
+                                    <i class="fas fa-file-excel mr-2"></i>Upload Excel
+                                </button>
+                                <button onclick="loadAllAttendance()" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-sm">
+                                    <i class="fas fa-sync mr-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-5 gap-3">
+                            <input id="newAttEmail" type="email" placeholder="Student email" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newAttSubject" type="text" placeholder="Subject" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newAttAttended" type="number" placeholder="Attended" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <input id="newAttTotal" type="number" placeholder="Total" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <button onclick="createAttendanceRecord()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Add/Update
+                            </button>
+                        </div>
+                        <div id="attendanceManagementContent" class="overflow-x-auto">
+                            <table class="w-full table-striped">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Student Email</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Subject</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Attended</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Percentage</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceManagementBody" class="divide-y divide-gray-100">
+                                    <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Resources -->
+                <div id="view-manage-resources" class="view-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-folder-tree text-teal-500 mr-2"></i>Manage Resources
+                            </h3>
+                            <button onclick="loadAllResources()" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition text-sm">
+                                <i class="fas fa-sync mr-2"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input id="newResTitle" type="text" placeholder="Resource title" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <select id="newResType" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                <option value="DOCUMENT">Document</option>
+                                <option value="LINK">Link</option>
+                                <option value="VIDEO">Video</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                            <input id="newResUrl" type="text" placeholder="Resource URL (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            <textarea id="newResDescription" rows="2" placeholder="Description" class="md:col-span-2 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></textarea>
+                            <div class="grid grid-cols-3 gap-2">
+                                <input id="newResDept" type="text" placeholder="Dept or ALL" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                <input id="newResSection" type="text" placeholder="Section or ALL" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                                <input id="newResSem" type="number" placeholder="Sem (0=ALL)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                            </div>
+                            <button onclick="createResource()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Add Resource
+                            </button>
+                        </div>
+                        <div id="resourceManagementContent" class="p-6">
+                            <div id="resourceManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div class="col-span-full text-center py-12 text-gray-400">
+                                    <p>Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Admin Scope Modal -->
+    <div id="adminScopeModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Select Admin Scope</h3>
+                <button onclick="closeAdminScopeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">Choose working scope before managing data to avoid cross-section mix-up.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Departments (multi-select)</label>
+                    <select id="adminScopeDepts" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="CSE">CSE</option><option value="ECE">ECE</option><option value="ME">ME</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sections (multi-select)</label>
+                    <select id="adminScopeSections" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Semesters (optional multi-select)</label>
+                    <select id="adminScopeSems" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="1">Sem 1</option><option value="2">Sem 2</option><option value="3">Sem 3</option><option value="4">Sem 4</option><option value="5">Sem 5</option><option value="6">Sem 6</option><option value="7">Sem 7</option><option value="8">Sem 8</option>
+                    </select>
+                </div>
+                <p class="text-xs text-gray-500">Tip: click items to select/unselect multiple values.</p>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="saveAdminScope()" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium">Apply Scope</button>
+                    <button type="button" onclick="closeAdminScopeModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Timetable Modal -->
+    <div id="editTimetableModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Timetable Entry</h3>
+                <button onclick="closeEditTimetableModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="editTimetableForm" class="space-y-4">
+                <input type="hidden" id="editTimetableId">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Day</label>
+                    <select id="editTtDay" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                    <input type="text" id="editTtTime" placeholder="09:00-10:00" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                    <input type="text" id="editTtSubject" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Room</label>
+                    <input type="text" id="editTtRoom" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Faculty</label>
+                    <input type="text" id="editTtFaculty" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Resources</label>
+                    <input type="text" id="editTtResource" placeholder="Books, links, lab notes" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="editTtDept" placeholder="Dept" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                    <input type="text" id="editTtSection" placeholder="Section" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                    <input type="number" id="editTtSem" placeholder="Sem" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                </div>
+                <div class="flex space-x-2 pt-4">
+                    <button type="button" onclick="updateTimetableEntry()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">Update</button>
+                    <button type="button" onclick="closeEditTimetableModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Announcement Modal -->
+    <div id="editAnnouncementModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 my-8 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Announcement</h3>
+                <button onclick="closeEditAnnouncementModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="editAnnouncementForm" class="space-y-4">
+                <input type="hidden" id="editAnnouncementId">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input type="text" id="editAnnTitle" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Body</label>
+                    <textarea id="editAnnBody" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"></textarea></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Image URL (optional)</label>
+                    <input type="text" id="editAnnImage" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Target Department</label>
+                    <select id="editAnnDept" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="ALL">All Departments</option><option value="CSE">CSE</option><option value="ECE">ECE</option><option value="ME">ME</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Target Departments (multi)</label>
+                    <select id="editAnnTargetDepts" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-20 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="CSE">CSE</option><option value="ECE">ECE</option><option value="ME">ME</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Target Sections (multi)</label>
+                    <select id="editAnnTargetSections" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-20 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Target Semesters (multi)</label>
+                    <select id="editAnnTargetSemesters" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-20 focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="1">Sem 1</option><option value="2">Sem 2</option><option value="3">Sem 3</option><option value="4">Sem 4</option><option value="5">Sem 5</option><option value="6">Sem 6</option><option value="7">Sem 7</option><option value="8">Sem 8</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select id="editAnnPriority" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option>
+                    </select></div>
+                <div class="flex space-x-2 pt-4">
+                    <button type="button" onclick="updateAnnouncement()" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium">Update</button>
+                    <button type="button" onclick="closeEditAnnouncementModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Attendance Modal -->
+    <div id="editAttendanceModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Attendance</h3>
+                <button onclick="closeEditAttendanceModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="editAttendanceForm" class="space-y-4">
+                <input type="hidden" id="editAttendanceEmail">
+                <input type="hidden" id="editAttendanceSubject">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Student Email</label>
+                    <input type="email" id="editAttendanceEmailDisplay" disabled class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                    <input type="text" id="editAttendanceSubjectDisplay" disabled class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Classes Attended</label>
+                    <input type="number" id="editAttendanceAttended" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Total Classes</label>
+                    <input type="number" id="editAttendanceTotal" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div class="flex space-x-2 pt-4">
+                    <button type="button" onclick="updateAttendance()" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium">Update</button>
+                    <button type="button" onclick="closeEditAttendanceModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Resource Modal -->
+    <div id="editResourceModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 my-8 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Resource</h3>
+                <button onclick="closeEditResourceModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="editResourceForm" class="space-y-4">
+                <input type="hidden" id="editResourceId">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input type="text" id="editResTitle" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select id="editResType" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="DOCUMENT">Document</option><option value="LINK">Link</option><option value="VIDEO">Video</option><option value="OTHER">Other</option>
+                    </select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">URL (optional)</label>
+                    <input type="text" id="editResUrl" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea id="editResDescription" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"></textarea></div>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="editResDept" placeholder="Dept" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                    <input type="text" id="editResSection" placeholder="Section" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                    <input type="number" id="editResSem" placeholder="Sem" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                </div>
+                <div class="flex space-x-2 pt-4">
+                    <button type="button" onclick="updateResource()" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium">Update</button>
+                    <button type="button" onclick="closeEditResourceModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Action Button (FAB) Chat -->
+    <div id="chatWidget" class="fixed z-50 hidden">
+        <!-- Chat Toggle Button / FAB -->
+        <button id="chatToggle" onclick="toggleChatbox()" class="fab-button bg-gradient-to-br from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-2xl transition-all duration-200 hover:scale-110">
+            <i class="fas fa-robot text-2xl"></i>
+        </button>
+        
+        <!-- Chat Container -->
+        <div id="chatContainer" class="hidden absolute bottom-20 right-0 w-96 max-w-[calc(100vw-2rem)] h-80 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-brand-primary to-brand-secondary p-4 flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-robot text-white"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-white font-semibold">Assistant</h4>
+                    <p class="text-white/70 text-xs">Campus Helper</p>
+                </div>
+                <button onclick="toggleChatbox()" class="text-white/70 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Messages -->
+            <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3">
+                <div class="flex items-end space-x-2">
+                    <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-primary-600 text-sm"></i>
+                    </div>
+                    <div class="chat-bubble-bot p-3 rounded-lg max-w-xs text-sm text-gray-700">
+                        Hi! Ask me about your attendance, schedule, or announcements! 📚
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input -->
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="chatInput" placeholder="Ask me anything..." onkeypress="handleChatKeypress(event)" class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm">
+                    <button onclick="sendChatMessage()" class="w-10 h-10 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-lg flex items-center justify-center hover:shadow-lg transition">
+                        <i class="fas fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

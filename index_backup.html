@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a0533 0%, #2d1b4e 25%, #4a2c7a 50%, #6b3fa0 75%, #8b5cf6 100%);
+            background-attachment: fixed;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .bg-animation span {
+            position: absolute;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(139, 92, 246, 0.2);
+            animation: move 25s infinite;
+            bottom: -150px;
+            border-radius: 50%;
+        }
+
+        .bg-animation span:nth-child(1) { left: 10%; width: 80px; height: 80px; animation-delay: 0s; }
+        .bg-animation span:nth-child(2) { left: 20%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 12s; }
+        .bg-animation span:nth-child(3) { left: 35%; width: 60px; height: 60px; animation-delay: 4s; }
+        .bg-animation span:nth-child(4) { left: 50%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 18s; }
+        .bg-animation span:nth-child(5) { left: 65%; width: 20px; height: 20px; animation-delay: 0s; }
+        .bg-animation span:nth-child(6) { left: 75%; width: 90px; height: 90px; animation-delay: 3s; }
+        .bg-animation span:nth-child(7) { left: 85%; width: 50px; height: 50px; animation-delay: 7s; }
+        .bg-animation span:nth-child(8) { left: 5%; width: 25px; height: 25px; animation-delay: 15s; animation-duration: 45s; }
+
+        @keyframes move {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-1000px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Glassmorphism Card */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        /* Header */
+        .header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: #a78bfa;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #c4b5fd, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Demo Toggle */
+        .demo-toggle {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .demo-toggle span {
+            font-size: 0.9rem;
+            color: #c4b5fd;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 180px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            width: 50%;
+            height: calc(100% - 8px);
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            border-radius: 16px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .toggle-switch.admin .toggle-slider {
+            transform: translateX(calc(100% - 4px));
+        }
+
+        .toggle-labels {
+            display: flex;
+            width: 100%;
+            justify-content: space-around;
+            z-index: 1;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .toggle-labels span {
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.3s ease;
+        }
+
+        .toggle-labels span.active {
+            color: #fff;
+        }
+
+        /* User Info */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            color: #e9d5ff;
+        }
+
+        /* Login Section */
+        .login-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 80px);
+            padding: 40px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .login-card h2 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #e9d5ff;
+        }
+
+        .login-card p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #c4b5fd;
+            font-size: 0.9rem;
+        }
+
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: #fff;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #c4b5fd;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+            color: #fff;
+        }
+
+        /* Main Container */
+        .main-container {
+            display: none;
+            padding: 30px 40px;
+        }
+
+        .main-container.active {
+            display: block;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        /* Cards */
+        .card {
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            color: #e9d5ff;
+        }
+
+        .card-header h3 i {
+            color: #a78bfa;
+        }
+
+        .card-badge {
+            background: rgba(139, 92, 246, 0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #c4b5fd;
+        }
+
+        /* Timetable */
+        .timetable-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .timetable-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .timetable-time {
+            min-width: 80px;
+            font-weight: 600;
+            color: #a78bfa;
+            font-size: 0.9rem;
+        }
+
+        .timetable-details {
+            flex: 1;
+        }
+
+        .timetable-subject {
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .timetable-room {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .timetable-day-badge {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #fff;
+        }
+
+        /* Announcements */
+        .announcement-item {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #8b5cf6;
+        }
+
+        .announcement-title {
+            font-weight: 600;
+            color: #e9d5ff;
+            margin-bottom: 8px;
+        }
+
+        .announcement-content {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.5;
+        }
+
+        .announcement-dept {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 3px 10px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: #c4b5fd;
+        }
+
+        /* Resources */
+        .resource-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .resource-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .resource-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .resource-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .resource-title {
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .resource-subject {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .resource-link {
+            color: #a78bfa;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .resource-link:hover {
+            color: #c4b5fd;
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-section {
+            margin-bottom: 30px;
+        }
+
+        .admin-section h3 {
+            font-size: 1.3rem;
+            color: #e9d5ff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-section h3 i {
+            color: #a78bfa;
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(139, 92, 246, 0.5);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .upload-zone i {
+            font-size: 3rem;
+            color: #a78bfa;
+            margin-bottom: 15px;
+        }
+
+        .upload-zone p {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .upload-zone .browse-text {
+            color: #a78bfa;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        /* Admin Scope Selection Gate */
+        .scope-gate {
+            padding: 40px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .scope-gate-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .scope-gate-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scope-gate-header h2 i {
+            color: #a78bfa;
+            font-size: 2.2rem;
+        }
+
+        .scope-gate-header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+        }
+
+        .scope-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+            text-align: left;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-checklist {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .section-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .section-checkbox:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .section-checkbox input {
+            accent-color: #8b5cf6;
+            width: 16px;
+            height: 16px;
+        }
+
+        .section-checkbox.selected {
+            background: rgba(139, 92, 246, 0.4);
+            border: 1px solid #8b5cf6;
+        }
+
+        .scope-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .scope-actions .btn-primary {
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .scope-actions .btn-secondary {
+            padding: 16px 30px;
+            font-size: 1rem;
+        }
+
+        .locked-scope-banner {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(167, 139, 250, 0.3));
+            border: 2px solid rgba(139, 92, 246, 0.6);
+            border-radius: 16px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
+        }
+
+        .locked-scope-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .locked-scope-info i {
+            font-size: 2rem;
+            color: #22c55e;
+        }
+
+        .locked-scope-info .scope-text {
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .locked-scope-info .scope-text span {
+            color: #fff;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            padding: 5px 14px;
+            border-radius: 8px;
+            margin: 0 6px;
+            font-weight: 700;
+        }
+
+        .locked-scope-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Admin Tools Grid */
+        .admin-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .admin-tool-card {
+            padding: 25px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-tool-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+            font-size: 1.15rem;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .admin-tool-card h3 i {
+            color: #a78bfa;
+            font-size: 1.3rem;
+        }
+
+        .admin-tool-card h3 .badge {
+            background: rgba(139, 92, 246, 0.3);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: auto;
+            color: #c4b5fd;
+            font-weight: 400;
+        }
+
+        /* Current View Section */
+        .current-view-section {
+            margin-top: 30px;
+        }
+
+        .current-view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .current-view-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #e9d5ff;
+            font-size: 1.3rem;
+        }
+
+        .view-label {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(167, 139, 250, 0.4));
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 1px solid rgba(167, 139, 250, 0.5);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Resource Item Styles */
+        .resource-form-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .resource-form-item input {
+            flex: 1;
+        }
+
+        .resource-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .resource-list-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Responsive Admin Grid */
+        @media (max-width: 1200px) {
+            .admin-tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-tools-grid {
+                grid-template-columns: 1fr;
+            }
+            .scope-selection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            font-weight: 500;
+        }
+
+        .data-table td {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        /* Student Panel */
+        .student-panel {
+            display: none;
+        }
+
+        .student-panel.active {
+            display: block;
+        }
+
+        /* Chatbot Widget */
+        .chatbot-widget {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .chatbot-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .chatbot-toggle i {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .chatbot-container {
+            position: absolute;
+            bottom: 75px;
+            right: 0;
+            width: 380px;
+            height: 500px;
+            background: rgba(30, 15, 50, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .chatbot-container.open {
+            display: flex;
+        }
+
+        .chatbot-header {
+            padding: 20px;
+            background: rgba(139, 92, 246, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chatbot-header .bot-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-header h4 {
+            color: #e9d5ff;
+            font-weight: 500;
+        }
+
+        .chatbot-header p {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            max-width: 85%;
+        }
+
+        .chat-message.bot {
+            margin-right: auto;
+        }
+
+        .chat-message.user {
+            margin-left: auto;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .chat-message.bot .message-bubble {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message.user .message-bubble {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chatbot-input {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 10px;
+        }
+
+        .chatbot-input input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .chatbot-input input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .chatbot-input input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+        }
+
+        .chatbot-input button {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-input button:hover {
+            transform: scale(1.1);
+        }
+
+        .chatbot-input button i {
+            color: #fff;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.7);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: rgba(139, 92, 246, 0.5);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #c4b5fd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.success {
+            background: rgba(34, 197, 94, 0.9);
+            color: #fff;
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+        }
+
+        .toast.info {
+            background: rgba(139, 92, 246, 0.9);
+            color: #fff;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-container {
+                padding: 20px;
+            }
+
+            .chatbot-container {
+                width: 100%;
+                height: 100%;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #a78bfa;
+            border-radius: 50%;
+            animation: typing 1.4s infinite both;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <i class="fas fa-graduation-cap"></i>
+            <h1>College Management System</h1>
+        </div>
+
+        <div class="demo-toggle" id="demoToggle" style="display: none;">
+            <span>View Mode:</span>
+            <div class="toggle-switch" id="toggleSwitch" onclick="toggleView()">
+                <div class="toggle-slider"></div>
+                <div class="toggle-labels">
+                    <span class="active" id="studentLabel">Student</span>
+                    <span id="adminLabel">Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="user-info" id="userInfo" style="display: none;">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <div class="user-name" id="userName">Guest</div>
+                <small id="userRole" style="color: #a78bfa;"></small>
+            </div>
+            <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 15px; font-size: 0.85rem;">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Login Section -->
+    <section class="login-section" id="loginSection">
+        <div class="login-card glass">
+            <i class="fas fa-lock" style="font-size: 3rem; color: #a78bfa; margin-bottom: 20px;"></i>
+            <h2>Welcome Back</h2>
+            <p>Enter your credentials to access the portal</p>
+            <div class="input-group">
+                <label for="loginEmail">Email Address</label>
+                <input type="email" id="loginEmail" placeholder="Enter your email">
+            </div>
+            <div class="input-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter your password" onkeypress="handleLoginKeypress(event)">
+            </div>
+            <button class="btn btn-primary" onclick="login()">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+            <p style="margin-top: 20px; font-size: 0.85rem; color: rgba(255,255,255,0.5);">
+                Demo: student1@college.edu / password123 | admin@college.edu / admin123
+            </p>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <main class="main-container" id="mainContainer">
+        <!-- Student Panel -->
+        <div class="student-panel active" id="studentPanel">
+            <div class="dashboard-grid">
+                <!-- Timetable Card -->
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-alt"></i> Today's Schedule</h3>
+                        <span class="card-badge" id="todayDay">Monday</span>
+                    </div>
+                    <div id="timetableContent">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading schedule...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Announcements Card -->
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bullhorn"></i> Announcements</h3>
+                        <span class="card-badge" id="announcementCount">0</span>
+                    </div>
+                    <div id="announcementsContent">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading announcements...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resources Card -->
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3><i class="fas fa-book"></i> Resources</h3>
+                        <span class="card-badge" id="resourceCount">0</span>
+                    </div>
+                    <div id="resourcesContent">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading resources...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Card -->
+                <div class="card glass">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user-circle"></i> My Profile</h3>
+                    </div>
+                    <div id="profileContent">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading profile...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Schedule Section -->
+            <div class="card glass" style="margin-top: 25px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-week"></i> Weekly Schedule</h3>
+                    <span class="card-badge" id="weeklyClassCount">0 Classes</span>
+                </div>
+                <div id="weeklyScheduleContent">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading weekly schedule...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel" id="adminPanel">
+            
+            <!-- Scope Selection Gate -->
+            <div class="scope-gate glass" id="scopeGate">
+                <div class="scope-gate-header">
+                    <h2><i class="fas fa-bullseye"></i> Scope Selection</h2>
+                    <p>Select Department, Semester, and Sections before making any changes</p>
+                </div>
+                
+                <div class="scope-selection-grid">
+                    <div class="input-group">
+                        <label><i class="fas fa-building" style="margin-right: 8px; color: #a78bfa;"></i>Department</label>
+                        <select id="scopeDept">
+                            <option value="">Select Department</option>
+                            <option value="CSE">Computer Science (CSE)</option>
+                            <option value="ECE">Electronics (ECE)</option>
+                            <option value="ME">Mechanical (ME)</option>
+                            <option value="CE">Civil (CE)</option>
+                            <option value="EE">Electrical (EE)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label><i class="fas fa-layer-group" style="margin-right: 8px; color: #a78bfa;"></i>Semester</label>
+                        <select id="scopeSem">
+                            <option value="">Select Semester</option>
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                            <option value="3">Semester 3</option>
+                            <option value="4">Semester 4</option>
+                            <option value="5">Semester 5</option>
+                            <option value="6">Semester 6</option>
+                            <option value="7">Semester 7</option>
+                            <option value="8">Semester 8</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label><i class="fas fa-users" style="margin-right: 8px; color: #a78bfa;"></i>Sections (Multi-Select)</label>
+                        <div class="section-checklist" id="sectionChecklist">
+                            <label class="section-checkbox">
+                                <input type="checkbox" value="A"> Section A
+                            </label>
+                            <label class="section-checkbox">
+                                <input type="checkbox" value="B"> Section B
+                            </label>
+                            <label class="section-checkbox">
+                                <input type="checkbox" value="C"> Section C
+                            </label>
+                            <label class="section-checkbox">
+                                <input type="checkbox" value="D"> Section D
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="scope-actions">
+                    <button class="btn btn-secondary" onclick="clearSelection()">
+                        <i class="fas fa-eraser"></i> Clear All
+                    </button>
+                    <button class="btn btn-primary" onclick="lockSelection()">
+                        <i class="fas fa-lock"></i> Lock Selection
+                    </button>
+                </div>
+            </div>
+
+            <!-- Locked Scope Banner + Admin Tools (Hidden by default) -->
+            <div id="adminToolsContainer" style="display: none;">
+                
+                <!-- Locked Scope Banner -->
+                <div class="locked-scope-banner">
+                    <div class="locked-scope-info">
+                        <i class="fas fa-check-circle"></i>
+                        <div class="scope-text">
+                            Scope Locked: <span id="lockedDept">-</span> <span id="lockedSem">-</span> Sections: <span id="lockedSections">-</span>
+                        </div>
+                    </div>
+                    <div class="locked-scope-actions">
+                        <button class="btn btn-danger" onclick="clearSelection()" style="padding: 10px 20px;">
+                            <i class="fas fa-times"></i> Clear All
+                        </button>
+                        <button class="btn btn-secondary" onclick="unlockSelection()" style="padding: 10px 20px;">
+                            <i class="fas fa-unlock"></i> Change Scope
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Admin Tools Grid (3 Columns) -->
+                <div class="admin-tools-grid">
+                    
+                    <!-- Left Column: Upload Timetable -->
+                    <div class="admin-tool-card glass">
+                        <h3><i class="fas fa-file-excel"></i> Upload Timetable <span class="badge">Excel Dropzone</span></h3>
+                        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop Excel file here</p>
+                            <p style="font-size: 0.8rem; color: #a78bfa; margin-top: 10px;">or click to browse</p>
+                            <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 12px;">
+                                Required columns: <strong>day, time, subject, room</strong>
+                            </p>
+                        </div>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" onchange="handleFileUpload(event)">
+                        <div id="uploadResult" style="margin-top: 15px;"></div>
+                        
+                        <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="btn btn-danger" onclick="clearScopeTimetable()" style="width: 100%;">
+                                <i class="fas fa-trash"></i> Clear Timetable for All Selected Sections
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Middle Column: Resource Manager -->
+                    <div class="admin-tool-card glass">
+                        <h3><i class="fas fa-book"></i> Resource Manager <span class="badge">Links/Files</span></h3>
+                        <div class="input-group">
+                            <label>Resource Title</label>
+                            <input type="text" id="resourceTitle" placeholder="e.g., Data Structures Notes">
+                        </div>
+                        <div class="input-group">
+                            <label>Link / URL</label>
+                            <input type="text" id="resourceLink" placeholder="https://drive.google.com/...">
+                        </div>
+                        <div class="input-group">
+                            <label>Subject</label>
+                            <input type="text" id="resourceSubject" placeholder="e.g., Data Structures">
+                        </div>
+                        <button class="btn btn-primary" onclick="addResource()" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-plus"></i> Add Resource
+                        </button>
+                        
+                        <div style="margin-top: 20px; flex: 1; display: flex; flex-direction: column;">
+                            <label style="color: #c4b5fd; font-size: 0.9rem;">Current Resources:</label>
+                            <div id="scopeResourcesList" style="margin-top: 10px; max-height: 150px; overflow-y: auto; flex: 1;">
+                                <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem;">No resources yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Active Announcements -->
+                    <div class="admin-tool-card glass">
+                        <h3><i class="fas fa-bullhorn"></i> Announcements <span class="badge">Active</span></h3>
+                        <div class="input-group">
+                            <label>Announcement Title</label>
+                            <input type="text" id="annTitle" placeholder="e.g., Exam Schedule Update">
+                        </div>
+                        <div class="input-group">
+                            <label>Content</label>
+                            <textarea id="annContent" rows="3" placeholder="Write your announcement here..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="createScopedAnnouncement()" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-paper-plane"></i> Post to Department
+                        </button>
+                        
+                        <div style="margin-top: 20px; flex: 1; display: flex; flex-direction: column;">
+                            <label style="color: #c4b5fd; font-size: 0.9rem;">Active Announcements:</label>
+                            <div id="scopeAnnouncementsList" style="margin-top: 10px; max-height: 150px; overflow-y: auto; flex: 1;">
+                                <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem;">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current View Section -->
+                <div class="card glass current-view-section">
+                    <div class="current-view-header">
+                        <h3><i class="fas fa-eye"></i> Current Timetable View</h3>
+                        <span class="view-label" id="currentViewLabel"><i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>Viewing: Select a scope to begin</span>
+                    </div>
+                    <div id="scopeTimetableView">
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-alt"></i>
+                            <p>Lock a scope above to view its timetable</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Section Tabs for viewing individual sections -->
+                    <div id="sectionViewTabs" style="margin-top: 20px; display: none;">
+                        <label style="color: #c4b5fd; font-size: 0.9rem; margin-bottom: 10px; display: block;"><i class="fas fa-toggle-on" style="margin-right: 8px;"></i>Quick View by Section:</label>
+                        <div id="sectionTabButtons" class="tabs"></div>
+                    </div>
+                </div>
+
+                <!-- Additional Admin Tabs -->
+                <div style="margin-top: 25px;">
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchAdminTab('users')">
+                            <i class="fas fa-users"></i> Manage Users
+                        </button>
+                        <button class="tab-btn" onclick="switchAdminTab('alltimetable')">
+                            <i class="fas fa-table"></i> All Timetable Entries
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content active" id="usersAdminTab">
+                        <div class="card glass" style="margin-top: 15px;">
+                            <div class="admin-section">
+                                <h3 style="color: #e9d5ff; margin-bottom: 15px;"><i class="fas fa-users-cog" style="color: #a78bfa;"></i> Registered Users</h3>
+                                <div id="usersTableContainer">
+                                    <div class="empty-state">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <p>Loading users...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="alltimetableAdminTab">
+                        <div class="card glass" style="margin-top: 15px;">
+                            <div class="admin-section">
+                                <h3 style="color: #e9d5ff; margin-bottom: 15px;"><i class="fas fa-calendar-check" style="color: #a78bfa;"></i> All Timetable Entries</h3>
+                                <div id="timetableTableContainer">
+                                    <div class="empty-state">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <p>Loading timetable...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Chatbot Widget -->
+    <div class="chatbot-widget" id="chatbotWidget" style="display: none;">
+        <div class="chatbot-container" id="chatbotContainer">
+            <div class="chatbot-header">
+                <div class="bot-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <h4>College Assistant</h4>
+                    <p>Ask me about your schedule, announcements...</p>
+                </div>
+            </div>
+            <div class="chatbot-messages" id="chatMessages">
+                <div class="chat-message bot">
+                    <div class="message-bubble">
+                        👋 Hello! I'm your college assistant. Ask me about your classes, schedule, announcements, or resources!
+                    </div>
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chatInput" placeholder="Type your question..." onkeypress="handleChatKeypress(event)">
+                <button onclick="sendChatMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        <button class="chatbot-toggle" onclick="toggleChatbot()">
+            <i class="fas fa-comments" id="chatbotIcon"></i>
+        </button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

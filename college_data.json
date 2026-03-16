@@ -1,0 +1,256 @@
+{
+  "college_info": {
+    "name": "Vardhaman College of Engineering",
+    "short_name": "VCE",
+    "location": "Shamshabad, Hyderabad, Telangana",
+    "established": 1999,
+    "type": "Autonomous Institute",
+    "affiliation": "JNTUH",
+    "accreditation": "NAAC A+ Grade, NBA Accredited",
+    "website": "www.vardhaman.org",
+    "contact": {
+      "phone": "+91-8414-661573",
+      "email": "principal@vardhaman.org",
+      "address": "Kacharam, Shamshabad, Hyderabad - 501218"
+    }
+  },
+  "departments": {
+    "CSE": {
+      "full_name": "Computer Science and Engineering",
+      "hod": "Dr. K. Ramesh Kumar",
+      "faculty_count": 45,
+      "labs": ["Programming Lab", "DBMS Lab", "OS Lab", "Networks Lab", "AI/ML Lab"],
+      "specializations": ["AI & ML", "Data Science", "Cyber Security", "Cloud Computing"]
+    },
+    "ECE": {
+      "full_name": "Electronics and Communication Engineering",
+      "hod": "Dr. S. Venkata Rao",
+      "faculty_count": 40,
+      "labs": ["Electronics Lab", "Communication Lab", "VLSI Lab", "Embedded Systems Lab"],
+      "specializations": ["VLSI Design", "Embedded Systems", "Signal Processing"]
+    },
+    "ME": {
+      "full_name": "Mechanical Engineering",
+      "hod": "Dr. P. Srinivas",
+      "faculty_count": 35,
+      "labs": ["Workshop", "Thermal Lab", "CAD/CAM Lab", "Fluid Mechanics Lab"],
+      "specializations": ["Manufacturing", "Thermal Engineering", "Design"]
+    },
+    "EEE": {
+      "full_name": "Electrical and Electronics Engineering",
+      "hod": "Dr. M. Lakshmi",
+      "faculty_count": 30,
+      "labs": ["Machines Lab", "Power Systems Lab", "Control Systems Lab"],
+      "specializations": ["Power Systems", "Control Systems", "Renewable Energy"]
+    },
+    "IT": {
+      "full_name": "Information Technology",
+      "hod": "Dr. N. Prasad",
+      "faculty_count": 25,
+      "labs": ["Web Technologies Lab", "Software Engineering Lab", "Data Mining Lab"],
+      "specializations": ["Web Development", "Software Engineering", "Data Analytics"]
+    },
+    "CIVIL": {
+      "full_name": "Civil Engineering",
+      "hod": "Dr. R. Suresh",
+      "faculty_count": 28,
+      "labs": ["Surveying Lab", "Concrete Lab", "Soil Mechanics Lab"],
+      "specializations": ["Structural Engineering", "Transportation", "Environmental"]
+    }
+  },
+  "placements": {
+    "overview": {
+      "placement_rate": "92%",
+      "highest_package": "44 LPA",
+      "average_package": "6.5 LPA",
+      "total_offers_2024": 1250,
+      "companies_visited": 180
+    },
+    "top_recruiters": [
+      {"name": "Microsoft", "package": "44 LPA", "roles": ["SDE", "PM"]},
+      {"name": "Amazon", "package": "32 LPA", "roles": ["SDE", "Data Engineer"]},
+      {"name": "Google", "package": "35 LPA", "roles": ["SDE", "Cloud Engineer"]},
+      {"name": "TCS", "package": "7 LPA", "roles": ["Developer", "Analyst"]},
+      {"name": "Infosys", "package": "6.5 LPA", "roles": ["SE", "SSE"]},
+      {"name": "Wipro", "package": "5.5 LPA", "roles": ["Developer", "Tester"]},
+      {"name": "Capgemini", "package": "6 LPA", "roles": ["Analyst", "Developer"]},
+      {"name": "Deloitte", "package": "8 LPA", "roles": ["Analyst", "Consultant"]},
+      {"name": "Cognizant", "package": "5 LPA", "roles": ["Programmer", "Analyst"]},
+      {"name": "Tech Mahindra", "package": "4.5 LPA", "roles": ["Developer"]}
+    ],
+    "placement_process": [
+      "Pre-Placement Talk (PPT)",
+      "Online Assessment / Aptitude Test",
+      "Technical Interview (1-2 rounds)",
+      "HR Interview",
+      "Final Selection"
+    ],
+    "eligibility": {
+      "min_cgpa": 6.5,
+      "no_backlogs": true,
+      "gap_years_allowed": 1
+    },
+    "contact": {
+      "coordinator": "Dr. Anand Kumar",
+      "email": "placements@vardhaman.org",
+      "phone": "+91-8414-661575"
+    }
+  },
+  "syllabus": {
+    "CSE": {
+      "sem_1": ["Engineering Mathematics I", "Engineering Physics", "Engineering Chemistry", "English", "Basic Electrical Engineering", "Engineering Graphics"],
+      "sem_2": ["Engineering Mathematics II", "Applied Physics", "Programming in C", "Environmental Science", "Basic Electronics", "Engineering Mechanics"],
+      "sem_3": ["Data Structures", "Discrete Mathematics", "Digital Logic Design", "OOP with Java", "Computer Organization", "Probability & Statistics"],
+      "sem_4": ["Design and Analysis of Algorithms", "Operating Systems", "Database Management Systems", "Computer Networks", "Theory of Computation", "Software Engineering"],
+      "sem_5": ["Compiler Design", "Machine Learning", "Web Technologies", "Information Security", "Cloud Computing", "Elective I"],
+      "sem_6": ["Artificial Intelligence", "Big Data Analytics", "Mobile App Development", "DevOps", "Elective II", "Mini Project"],
+      "sem_7": ["Deep Learning", "Blockchain Technology", "IoT", "Elective III", "Major Project Phase I", "Industry Internship"],
+      "sem_8": ["Major Project Phase II", "Seminar", "Elective IV"]
+    },
+    "ECE": {
+      "sem_1": ["Engineering Mathematics I", "Engineering Physics", "Engineering Chemistry", "English", "Basic Electrical Engineering", "Engineering Graphics"],
+      "sem_2": ["Engineering Mathematics II", "Applied Physics", "Programming in C", "Environmental Science", "Basic Electronics", "Engineering Mechanics"],
+      "sem_3": ["Electronic Devices & Circuits", "Signals & Systems", "Digital Electronics", "Network Analysis", "Electromagnetic Fields", "Probability & Statistics"],
+      "sem_4": ["Analog Communications", "Linear Integrated Circuits", "Control Systems", "Microprocessors", "Pulse & Digital Circuits", "Transmission Lines"],
+      "sem_5": ["Digital Communications", "VLSI Design", "Antennas & Wave Propagation", "Digital Signal Processing", "Embedded Systems", "Elective I"],
+      "sem_6": ["Microcontrollers", "Wireless Communications", "Optical Communications", "Radar Systems", "Elective II", "Mini Project"],
+      "sem_7": ["Satellite Communications", "IoT", "5G Technologies", "Elective III", "Major Project Phase I", "Industry Internship"],
+      "sem_8": ["Major Project Phase II", "Seminar", "Elective IV"]
+    }
+  },
+  "academic_calendar": {
+    "odd_semester": {
+      "start_date": "2025-07-15",
+      "end_date": "2025-12-15",
+      "mid_exams_1": "2025-08-25 to 2025-08-30",
+      "mid_exams_2": "2025-10-20 to 2025-10-25",
+      "end_semester": "2025-12-01 to 2025-12-15"
+    },
+    "even_semester": {
+      "start_date": "2026-01-05",
+      "end_date": "2026-05-30",
+      "mid_exams_1": "2026-02-15 to 2026-02-20",
+      "mid_exams_2": "2026-04-10 to 2026-04-15",
+      "end_semester": "2026-05-15 to 2026-05-30"
+    },
+    "holidays": [
+      {"name": "Republic Day", "date": "2026-01-26"},
+      {"name": "Holi", "date": "2026-03-14"},
+      {"name": "Ugadi", "date": "2026-03-28"},
+      {"name": "Good Friday", "date": "2026-04-03"},
+      {"name": "Summer Vacation", "date": "2026-06-01 to 2026-07-10"}
+    ]
+  },
+  "facilities": {
+    "library": {
+      "name": "Central Library",
+      "books": 75000,
+      "journals": 250,
+      "e_resources": ["IEEE Xplore", "Springer", "NPTEL", "Coursera"],
+      "timing": "8:00 AM - 9:00 PM",
+      "seating_capacity": 500
+    },
+    "hostel": {
+      "boys_hostel": {"capacity": 1200, "blocks": 4},
+      "girls_hostel": {"capacity": 800, "blocks": 3},
+      "facilities": ["Wi-Fi", "Mess", "Gym", "Indoor Games", "24/7 Security"]
+    },
+    "sports": {
+      "indoor": ["Badminton", "Table Tennis", "Chess", "Carrom"],
+      "outdoor": ["Cricket", "Football", "Basketball", "Volleyball", "Athletics"],
+      "gym": true,
+      "swimming_pool": true
+    },
+    "transport": {
+      "routes": 45,
+      "buses": 60,
+      "coverage": ["Hyderabad", "Secunderabad", "Shamshabad", "Mehdipatnam", "ECIL"]
+    },
+    "canteen": {
+      "main_canteen": {"timing": "7:30 AM - 8:00 PM", "capacity": 300},
+      "food_court": {"timing": "10:00 AM - 6:00 PM", "outlets": 5},
+      "coffee_shop": {"timing": "8:00 AM - 7:00 PM"}
+    }
+  },
+  "clubs_and_activities": {
+    "technical": [
+      {"name": "Coding Club", "description": "Competitive programming and hackathons"},
+      {"name": "Robotics Club", "description": "Building robots and automation projects"},
+      {"name": "AI/ML Club", "description": "Machine learning projects and workshops"},
+      {"name": "Open Source Club", "description": "Contributing to open source projects"},
+      {"name": "Cybersecurity Club", "description": "Ethical hacking and security"}
+    ],
+    "cultural": [
+      {"name": "Music Club", "description": "Classical and western music"},
+      {"name": "Dance Club", "description": "Various dance forms"},
+      {"name": "Drama Club", "description": "Theatre and acting"},
+      {"name": "Photography Club", "description": "Photography and videography"}
+    ],
+    "events": [
+      {"name": "Dhwani", "type": "Cultural Fest", "month": "February"},
+      {"name": "Yantrika", "type": "Technical Fest", "month": "March"},
+      {"name": "Sportiva", "type": "Sports Fest", "month": "January"}
+    ]
+  },
+  "fee_structure": {
+    "tuition_fee": {
+      "CSE": 145000,
+      "ECE": 135000,
+      "ME": 125000,
+      "EEE": 130000,
+      "IT": 140000,
+      "CIVIL": 120000
+    },
+    "hostel_fee": 85000,
+    "transport_fee": {
+      "zone_1": 35000,
+      "zone_2": 45000,
+      "zone_3": 55000
+    },
+    "other_fees": {
+      "exam_fee": 3000,
+      "library_fee": 2000,
+      "lab_fee": 5000
+    },
+    "scholarships": [
+      "Merit Scholarship (Top 10%)",
+      "SC/ST Fee Reimbursement",
+      "EBC Scholarship",
+      "Sports Quota"
+    ]
+  },
+  "important_contacts": {
+    "principal": {"name": "Dr. A. Narasimha Rao", "phone": "+91-8414-661570"},
+    "dean_academics": {"name": "Dr. B. Venkat Reddy", "phone": "+91-8414-661571"},
+    "dean_student_affairs": {"name": "Dr. C. Srinivas", "phone": "+91-8414-661572"},
+    "examination_branch": {"phone": "+91-8414-661574"},
+    "admissions": {"phone": "+91-8414-661576"},
+    "helpdesk": {"phone": "+91-8414-661577", "email": "helpdesk@vardhaman.org"}
+  },
+  "rules_and_regulations": {
+    "attendance": {
+      "minimum_required": 75,
+      "condonation_limit": 65,
+      "consequences": "Below 65% leads to detention"
+    },
+    "dress_code": "Formal attire on weekdays, ID card mandatory",
+    "exam_rules": [
+      "Carry hall ticket and ID card",
+      "No electronic devices allowed",
+      "Reach 15 minutes before exam"
+    ],
+    "library_rules": [
+      "Maintain silence",
+      "No food or drinks",
+      "Return books on time",
+      "Fine: Rs. 5 per day for late return"
+    ]
+  },
+  "quick_links": {
+    "student_portal": "https://student.vardhaman.org",
+    "lms": "https://lms.vardhaman.org",
+    "exam_results": "https://results.vardhaman.org",
+    "fee_payment": "https://fees.vardhaman.org",
+    "grievance": "https://grievance.vardhaman.org"
+  }
+}
