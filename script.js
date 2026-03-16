@@ -96,6 +96,21 @@ function handleLoginKeypress(event) {
     if (event.key === 'Enter') login();
 }
 
+function setAdminNavigationMode(isAdmin) {
+    const studentViewNames = ['dashboard', 'schedule', 'attendance', 'announcements', 'resources'];
+
+    studentViewNames.forEach((viewName) => {
+        const matchingButtons = document.querySelectorAll(`.nav-item[onclick*="switchView('${viewName}')"]`);
+        matchingButtons.forEach((btn) => btn.classList.toggle('hidden', isAdmin));
+    });
+
+    const quickSyncBtn = document.getElementById('quickSyncBtn');
+    if (quickSyncBtn) quickSyncBtn.classList.toggle('hidden', isAdmin);
+
+    const bottomNav = document.getElementById('bottomNav');
+    if (bottomNav) bottomNav.classList.toggle('hidden', isAdmin);
+}
+
 async function login() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
@@ -137,14 +152,20 @@ async function login() {
         if (currentUser.role === 'ADMIN') {
             adminSection.classList.remove('hidden');
             if (scopeBtn) scopeBtn.classList.remove('hidden');
+            setAdminNavigationMode(true);
             openAdminScopeModal();
+            switchView('manage-timetable');
         } else {
             adminSection.classList.add('hidden');
             if (scopeBtn) scopeBtn.classList.add('hidden');
+            setAdminNavigationMode(false);
+            switchView('dashboard');
         }
         
-        // Load dashboard
-        loadDashboard();
+        // Load student dashboard data only for student users.
+        if (currentUser.role !== 'ADMIN') {
+            loadDashboard();
+        }
         
     } catch (error) {
         console.error('Login error:', error);
@@ -165,6 +186,10 @@ function logout() {
     document.getElementById('loginPassword').value = '';
     const scopeBtn = document.getElementById('adminScopeBtn');
     if (scopeBtn) scopeBtn.classList.add('hidden');
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection) adminSection.classList.add('hidden');
+    setAdminNavigationMode(false);
+    switchView('dashboard');
     document.getElementById('chatMessages').innerHTML = `
         <div class="flex items-end space-x-2">
             <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -431,6 +456,12 @@ async function loadResources() {
 
 function switchView(viewName) {
     const adminViews = ['manage-timetable', 'manage-announcements', 'manage-attendance', 'manage-resources'];
+    const studentViews = ['dashboard', 'schedule', 'attendance', 'announcements', 'resources'];
+
+    if (currentUser?.role === 'ADMIN' && studentViews.includes(viewName)) {
+        viewName = 'manage-timetable';
+    }
+
     if (adminViews.includes(viewName) && currentUser?.role === 'ADMIN' && !adminScope.configured) {
         showToast('Select admin scope first (dept/section/semester)', 'warning');
         openAdminScopeModal();
@@ -463,7 +494,8 @@ function switchView(viewName) {
     // Update navigation
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => item.classList.remove('active'));
-    event.target.closest('.nav-item')?.classList.add('active');
+    const activeNav = document.querySelector(`.nav-item[onclick*="switchView('${viewName}')"]`);
+    activeNav?.classList.add('active');
     
     // Update page title
     const titles = {
