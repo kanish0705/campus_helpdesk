@@ -24,6 +24,69 @@ from openpyxl import load_workbook
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 DATABASE_URL = "sqlite:///./campus.db"
 
+DEMO_USERS = [
+    {
+        "email": "admin@college.edu",
+        "password": "admin123",
+        "name": "Dr. Admin Kumar",
+        "roll_number": "ADMIN001",
+        "role": "ADMIN",
+        "dept": "ALL",
+        "section": "ALL",
+        "sem": 0,
+    },
+    {
+        "email": "student1@college.edu",
+        "password": "password123",
+        "name": "Rahul Sharma",
+        "roll_number": "21CSE101",
+        "role": "STUDENT",
+        "dept": "CSE",
+        "section": "A",
+        "sem": 4,
+    },
+    {
+        "email": "student2@college.edu",
+        "password": "password123",
+        "name": "Priya Singh",
+        "roll_number": "21CSE102",
+        "role": "STUDENT",
+        "dept": "CSE",
+        "section": "A",
+        "sem": 4,
+    },
+    {
+        "email": "student3@college.edu",
+        "password": "password123",
+        "name": "Amit Patel",
+        "roll_number": "21ECE101",
+        "role": "STUDENT",
+        "dept": "ECE",
+        "section": "B",
+        "sem": 6,
+    },
+    {
+        "email": "student4@college.edu",
+        "password": "password123",
+        "name": "Sneha Gupta",
+        "roll_number": "23ME101",
+        "role": "STUDENT",
+        "dept": "ME",
+        "section": "A",
+        "sem": 2,
+    },
+    {
+        "email": "student5@college.edu",
+        "password": "password123",
+        "name": "Vikram Reddy",
+        "roll_number": "21CSE201",
+        "role": "STUDENT",
+        "dept": "CSE",
+        "section": "B",
+        "sem": 4,
+    },
+]
+
 # Load College Data from JSON
 def load_college_data():
     try:
@@ -397,6 +460,15 @@ def assert_role_barrier(admin: User, dept: str, section: str):
         raise HTTPException(status_code=403, detail="Not allowed outside your assigned department/section")
 
 
+def ensure_demo_users_if_empty(db: Session):
+    """Bootstrap demo users for first-run deployments where DB starts empty."""
+    if db.query(User).count() > 0:
+        return
+
+    db.add_all([User(**user_payload) for user_payload in DEMO_USERS])
+    db.commit()
+
+
 def announcement_visible_for_user(announcement: Announcement, user: User) -> bool:
     depts = csv_to_list(announcement.target_depts)
     sections = csv_to_list(announcement.target_sections)
@@ -536,7 +608,11 @@ def get_db():
 @app.post("/login", response_model=UserResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login endpoint - returns user profile"""
-    user = db.query(User).filter(User.email == request.email).first()
+    ensure_demo_users_if_empty(db)
+
+    # Normalize email to avoid trivial input mismatch from whitespace/case.
+    normalized_email = request.email.strip().lower()
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if user.password != request.password:
