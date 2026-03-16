@@ -140,6 +140,8 @@ async function login() {
         loginSection.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         chatWidget.classList.remove('hidden');
+        isChatOpen = false;
+        chatContainer.classList.add('hidden');
         
         // Update user info
         document.getElementById('sidebarUserName').textContent = currentUser.name;
@@ -181,6 +183,8 @@ function logout() {
     mainDashboard.classList.add('hidden');
     loginSection.classList.remove('hidden');
     chatWidget.classList.add('hidden');
+    isChatOpen = false;
+    chatContainer.classList.add('hidden');
     
     document.getElementById('loginEmail').value = '';
     document.getElementById('loginPassword').value = '';
@@ -549,15 +553,17 @@ async function quickSync() {
 // ============== CHATBOT FUNCTIONALITY ==============
 
 function toggleChatbox() {
-    isChatOpen = !isChatOpen;
     const container = document.getElementById('chatContainer');
     const toggle = document.getElementById('chatToggle');
-    
-    if (isChatOpen) {
-        container.classList.remove('hidden');
-        toggle.style.content = '✕';
-    } else {
-        container.classList.add('hidden');
+    if (!container || !toggle) return;
+
+    const shouldOpen = container.classList.contains('hidden');
+    isChatOpen = shouldOpen;
+    container.classList.toggle('hidden', !shouldOpen);
+
+    const icon = toggle.querySelector('i');
+    if (icon) {
+        icon.className = shouldOpen ? 'fas fa-times text-2xl' : 'fas fa-robot text-2xl';
     }
 }
 
@@ -642,11 +648,17 @@ function toggleSidebar() {
 document.addEventListener('click', (e) => {
     const chatWidget = document.getElementById('chatWidget');
     const chatToggle = document.getElementById('chatToggle');
-    
-    if (!chatWidget.contains(e.target) && isChatOpen) {
-        if (e.target !== chatToggle && !chatToggle.contains(e.target)) {
-            // Don't close on click
-        }
+
+    if (!chatWidget || !chatToggle || !isChatOpen) {
+        return;
+    }
+
+    if (!chatWidget.contains(e.target)) {
+        const container = document.getElementById('chatContainer');
+        if (container) container.classList.add('hidden');
+        const icon = chatToggle.querySelector('i');
+        if (icon) icon.className = 'fas fa-robot text-2xl';
+        isChatOpen = false;
     }
 });
 
