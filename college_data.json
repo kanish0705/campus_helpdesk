@@ -1,17 +1,17 @@
 {
   "college_info": {
-    "name": "Vardhaman College of Engineering",
-    "short_name": "VCE",
-    "location": "Shamshabad, Hyderabad, Telangana",
-    "established": 1999,
-    "type": "Autonomous Institute",
-    "affiliation": "JNTUH",
-    "accreditation": "NAAC A+ Grade, NBA Accredited",
-    "website": "www.vardhaman.org",
+    "name": "Jain University",
+    "short_name": "JU",
+    "location": "Bengaluru, Karnataka",
+    "established": 2009,
+    "type": "Deemed-to-be University",
+    "affiliation": "UGC",
+    "accreditation": "NAAC A++ Grade",
+    "website": "www.jainuniversity.ac.in",
     "contact": {
-      "phone": "+91-8414-661573",
-      "email": "principal@vardhaman.org",
-      "address": "Kacharam, Shamshabad, Hyderabad - 501218"
+      "phone": "+91-80-46501700",
+      "email": "info@jainuniversity.ac.in",
+      "address": "Jayanagar 9th Block, Bengaluru - 560069"
     }
   },
   "departments": {
@@ -92,8 +92,8 @@
     },
     "contact": {
       "coordinator": "Dr. Anand Kumar",
-      "email": "placements@vardhaman.org",
-      "phone": "+91-8414-661575"
+      "email": "placements@jainuniversity.ac.in",
+      "phone": "+91-80-46501777"
     }
   },
   "syllabus": {
@@ -164,7 +164,7 @@
     "transport": {
       "routes": 45,
       "buses": 60,
-      "coverage": ["Hyderabad", "Secunderabad", "Shamshabad", "Mehdipatnam", "ECIL"]
+      "coverage": ["Jayanagar", "JP Nagar", "Banashankari", "Electronic City", "Whitefield"]
     },
     "canteen": {
       "main_canteen": {"timing": "7:30 AM - 8:00 PM", "capacity": 300},
@@ -225,7 +225,7 @@
     "dean_student_affairs": {"name": "Dr. C. Srinivas", "phone": "+91-8414-661572"},
     "examination_branch": {"phone": "+91-8414-661574"},
     "admissions": {"phone": "+91-8414-661576"},
-    "helpdesk": {"phone": "+91-8414-661577", "email": "helpdesk@vardhaman.org"}
+    "helpdesk": {"phone": "+91-80-46501888", "email": "helpdesk@jainuniversity.ac.in"}
   },
   "rules_and_regulations": {
     "attendance": {
@@ -247,10 +247,10 @@
     ]
   },
   "quick_links": {
-    "student_portal": "https://student.vardhaman.org",
-    "lms": "https://lms.vardhaman.org",
-    "exam_results": "https://results.vardhaman.org",
-    "fee_payment": "https://fees.vardhaman.org",
-    "grievance": "https://grievance.vardhaman.org"
+    "student_portal": "https://student.jainuniversity.ac.in",
+    "lms": "https://lms.jainuniversity.ac.in",
+    "exam_results": "https://results.jainuniversity.ac.in",
+    "fee_payment": "https://fees.jainuniversity.ac.in",
+    "grievance": "https://grievance.jainuniversity.ac.in"
   }
 }

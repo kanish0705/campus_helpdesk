@@ -9,6 +9,7 @@ const API_BASE = window.location.origin;
 let currentUser = null;
 let dashboardData = null;
 let isChatOpen = false;
+let isChatRequestInFlight = false;
 let adminScope = {
     configured: false,
     depts: [],
@@ -575,9 +576,20 @@ function handleChatKeypress(event) {
 
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
+    if (!input || isChatRequestInFlight) return;
+
     const message = input.value.trim();
     
     if (!message) return;
+    if (!currentUser?.email) {
+        showToast('Please login to use chat', 'warning');
+        addChatMessage('Please login first, then I can help you with attendance and schedule.', 'bot');
+        return;
+    }
+
+    isChatRequestInFlight = true;
+    if (sendBtn) sendBtn.disabled = true;
     
     // Add user message to chat
     addChatMessage(message, 'user');
@@ -593,38 +605,52 @@ async function sendChatMessage() {
             })
         });
         
-        if (!response.ok) throw new Error('Chat failed');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Chat failed (${response.status})`);
+        }
         
         const data = await response.json();
-        addChatMessage(data.response, 'bot');
+        const botReply = (data?.response || '').toString().trim();
+        if (!botReply) throw new Error('Empty response from assistant');
+        addChatMessage(botReply, 'bot');
         
     } catch (error) {
         console.error('Chat error:', error);
-        addChatMessage('Sorry, something went wrong. Try again!', 'bot');
+        addChatMessage(`Sorry, I could not process that (${error.message}). Please try again.`, 'bot');
+    } finally {
+        isChatRequestInFlight = false;
+        if (sendBtn) sendBtn.disabled = false;
+        input.focus();
     }
 }
 
 function addChatMessage(text, sender) {
     const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer) return;
+
     const messageDiv = document.createElement('div');
+    const bubble = document.createElement('div');
+    bubble.className = sender === 'user'
+        ? 'chat-bubble-user p-3 rounded-lg max-w-xs text-sm'
+        : 'chat-bubble-bot p-3 rounded-lg max-w-xs text-sm text-gray-700 whitespace-pre-line';
+    bubble.textContent = String(text || '');
     
     if (sender === 'user') {
         messageDiv.className = 'flex items-end justify-end space-x-2';
-        messageDiv.innerHTML = `
-            <div class="chat-bubble-user p-3 rounded-lg max-w-xs text-sm">
-                ${text}
-            </div>
-        `;
+        messageDiv.appendChild(bubble);
     } else {
         messageDiv.className = 'flex items-end space-x-2';
-        messageDiv.innerHTML = `
-            <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-robot text-primary-600 text-sm"></i>
-            </div>
-            <div class="chat-bubble-bot p-3 rounded-lg max-w-xs text-sm text-gray-700">
-                ${text}
-            </div>
-        `;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0';
+
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-robot text-primary-600 text-sm';
+        avatar.appendChild(icon);
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(bubble);
     }
     
     messagesContainer.appendChild(messageDiv);
