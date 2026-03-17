@@ -16,6 +16,10 @@ from datetime import datetime, date, timedelta
 import io
 import os
 import json
+import csv
+import re
+import secrets
+import hashlib
 import httpx
 import math
 from openpyxl import load_workbook
@@ -97,6 +101,9 @@ def load_college_data():
 
 COLLEGE_DATA = load_college_data()
 
+MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024
+BULK_REPORTS_DIR = "bulk_upload_reports"
+
 # ============== DATABASE SETUP ==============
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -109,8 +116,9 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), unique=True, index=True)
-    password = Column(String(100))
+    password = Column(String(255))
     name = Column(String(100))
+    username = Column(String(50), unique=True, index=True, nullable=True)
     roll_number = Column(String(20), unique=True, nullable=True)
     role = Column(String(20), default="STUDENT")  # ADMIN or STUDENT
     dept = Column(String(50))
@@ -201,6 +209,10 @@ def migrate_schema_if_needed():
         if "target_semesters" not in announcement_cols:
             conn.exec_driver_sql("ALTER TABLE announcements ADD COLUMN target_semesters TEXT")
 
+        user_cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()}
+        if "username" not in user_cols:
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN username VARCHAR(50)")
+
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -216,6 +228,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
+    username: Optional[str] = None
     roll_number: Optional[str] = None
     role: str
     dept: str
@@ -465,7 +478,14 @@ def ensure_demo_users_if_empty(db: Session):
     if db.query(User).count() > 0:
         return
 
-    db.add_all([User(**user_payload) for user_payload in DEMO_USERS])
+    users = []
+    for user_payload in DEMO_USERS:
+        payload = dict(user_payload)
+        payload["password"] = hash_password(payload["password"])
+        payload["username"] = payload.get("roll_number")
+        users.append(User(**payload))
+
+    db.add_all(users)
     db.commit()
 
 
@@ -522,6 +542,45 @@ def coalesce_header_index(headers: List[str], aliases: List[str]) -> Optional[in
         if alias in headers:
             return headers.index(alias)
     return None
+
+
+def hash_password(password: str) -> str:
+    """Store passwords using salted PBKDF2-HMAC SHA256."""
+    iterations = 120000
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), iterations)
+    return f"pbkdf2_sha256${iterations}${salt}${digest.hex()}"
+
+
+def verify_password(plain_password: str, stored_password: str) -> bool:
+    """Support secure hashes while keeping backward compatibility with legacy plain-text records."""
+    if not stored_password:
+        return False
+
+    if not stored_password.startswith("pbkdf2_sha256$"):
+        return plain_password == stored_password
+
+    try:
+        _, iterations_raw, salt, digest_hex = stored_password.split("$", 3)
+        iterations = int(iterations_raw)
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            plain_password.encode("utf-8"),
+            salt.encode("utf-8"),
+            iterations,
+        ).hex()
+        return secrets.compare_digest(digest, digest_hex)
+    except Exception:
+        return False
+
+
+def generate_default_password(length: int = 10) -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def is_valid_email(email: str) -> bool:
+    return bool(re.match(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", email or ""))
 
 def get_student_attendance(db: Session, email: str, threshold: float = 75.0) -> AttendanceResponse:
     """
@@ -630,7 +689,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == normalized_email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    if user.password != request.password:
+    if not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return user
 
@@ -1584,6 +1643,265 @@ async def upload_announcements_excel(
 
     db.commit()
     return {"success": True, "created": created, "message": "Announcements Excel processed"}
+
+
+@app.post("/admin/students/bulk-upload")
+async def bulk_upload_students(
+    admin_email: str = Form(...),
+    send_notifications: bool = Form(False),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Create many student accounts from CSV/XLSX with row-level validation and error reporting."""
+    admin = get_admin_or_403(db, admin_email)
+
+    file_name = (file.filename or "").strip()
+    ext = os.path.splitext(file_name)[1].lower()
+    if ext not in [".csv", ".xlsx"]:
+        raise HTTPException(status_code=400, detail="Only .csv and .xlsx files are allowed")
+
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(file_bytes) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="File too large. Maximum allowed size is 5 MB")
+
+    rows: List[List[Any]] = []
+    headers: List[str] = []
+
+    if ext == ".csv":
+        try:
+            decoded = file_bytes.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="CSV must be UTF-8 encoded")
+
+        reader = csv.reader(io.StringIO(decoded))
+        csv_rows = list(reader)
+        if not csv_rows:
+            raise HTTPException(status_code=400, detail="CSV is empty")
+        headers = [normalize_excel_header(cell) for cell in csv_rows[0]]
+        rows = [list(r) for r in csv_rows[1:]]
+    else:
+        workbook = load_workbook(filename=io.BytesIO(file_bytes), data_only=True)
+        sheet = workbook.active
+        xlsx_rows = list(sheet.iter_rows(values_only=True))
+        if not xlsx_rows:
+            raise HTTPException(status_code=400, detail="Excel is empty")
+        headers = [normalize_excel_header(cell) for cell in xlsx_rows[0]]
+        rows = [list(r) for r in xlsx_rows[1:]]
+
+    name_idx = coalesce_header_index(headers, ["name", "full_name", "student_name"])
+    email_idx = coalesce_header_index(headers, ["email", "email_address"])
+    roll_idx = coalesce_header_index(headers, ["roll_number", "roll", "roll_no", "rollno", "register_number"])
+    dept_idx = coalesce_header_index(headers, ["department", "dept"])
+    section_idx = coalesce_header_index(headers, ["section"])
+    sem_idx = coalesce_header_index(headers, ["sem", "semester"])
+
+    missing = []
+    if name_idx is None:
+        missing.append("Name")
+    if email_idx is None:
+        missing.append("Email")
+    if roll_idx is None:
+        missing.append("Roll Number")
+    if dept_idx is None:
+        missing.append("Department")
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required columns: {', '.join(missing)}")
+
+    existing_students = db.query(User).filter(User.role == "STUDENT").all()
+    existing_emails = {str(u.email or "").strip().lower() for u in existing_students if u.email}
+    existing_rolls = {str(u.roll_number or "").strip().upper() for u in existing_students if u.roll_number}
+    existing_usernames = {str(u.username or "").strip().upper() for u in existing_students if u.username}
+
+    seen_emails: set = set()
+    seen_rolls: set = set()
+    seen_usernames: set = set()
+
+    created = 0
+    errors: List[Dict[str, Any]] = []
+    credentials: List[Dict[str, str]] = []
+
+    for row_index, row in enumerate(rows, start=2):
+        if not row or all(cell is None or str(cell).strip() == "" for cell in row):
+            continue
+
+        def get_cell(idx: Optional[int]) -> str:
+            if idx is None or idx >= len(row) or row[idx] is None:
+                return ""
+            return str(row[idx]).strip()
+
+        name = get_cell(name_idx)
+        email = get_cell(email_idx).lower()
+        roll_number = get_cell(roll_idx).upper()
+        department = get_cell(dept_idx).upper()
+        section = get_cell(section_idx).upper() if section_idx is not None else "A"
+        sem_raw = get_cell(sem_idx) if sem_idx is not None else "1"
+
+        if not name or not email or not roll_number or not department:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Missing required fields",
+            })
+            continue
+
+        if not is_valid_email(email):
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Invalid email format",
+            })
+            continue
+
+        try:
+            sem = int(sem_raw) if sem_raw else 1
+        except ValueError:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Semester must be an integer",
+            })
+            continue
+
+        username = roll_number
+
+        if admin.dept != "ALL" and department != admin.dept:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Department out of admin scope",
+            })
+            continue
+
+        if admin.section != "ALL" and (section or "A") != admin.section:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Section out of admin scope",
+            })
+            continue
+
+        if email in existing_emails or email in seen_emails:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Duplicate email",
+            })
+            continue
+
+        if roll_number in existing_rolls or roll_number in seen_rolls:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Duplicate roll number",
+            })
+            continue
+
+        if username in existing_usernames or username in seen_usernames:
+            errors.append({
+                "row_number": row_index,
+                "name": name,
+                "email": email,
+                "roll_number": roll_number,
+                "department": department,
+                "error": "Duplicate username",
+            })
+            continue
+
+        default_password = generate_default_password()
+        db.add(User(
+            name=name,
+            email=email,
+            username=username,
+            roll_number=roll_number,
+            dept=department,
+            section=section or "A",
+            sem=sem if sem > 0 else 1,
+            role="STUDENT",
+            password=hash_password(default_password),
+        ))
+
+        seen_emails.add(email)
+        seen_rolls.add(roll_number)
+        seen_usernames.add(username)
+        created += 1
+        credentials.append({
+            "name": name,
+            "email": email,
+            "username": username,
+            "roll_number": roll_number,
+            "password": default_password,
+        })
+
+    db.commit()
+
+    report_id = None
+    if errors:
+        os.makedirs(BULK_REPORTS_DIR, exist_ok=True)
+        report_id = secrets.token_hex(8)
+        report_path = os.path.join(BULK_REPORTS_DIR, f"bulk_student_upload_errors_{report_id}.csv")
+        with open(report_path, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(
+                csvfile,
+                fieldnames=["row_number", "name", "email", "roll_number", "department", "error"],
+            )
+            writer.writeheader()
+            writer.writerows(errors)
+
+    notifications_sent = created if send_notifications else 0
+    return {
+        "success": len(errors) == 0,
+        "message": "Bulk upload completed" if not errors else "Bulk upload completed with row errors",
+        "created_count": created,
+        "failed_count": len(errors),
+        "notifications_requested": send_notifications,
+        "notifications_sent": notifications_sent,
+        "credentials": credentials,
+        "error_report_id": report_id,
+        "error_report_download_url": (
+            f"/admin/students/bulk-upload/error-report/{report_id}?admin_email={admin_email}"
+            if report_id else None
+        ),
+    }
+
+
+@app.get("/admin/students/bulk-upload/error-report/{report_id}")
+def download_bulk_upload_error_report(report_id: str, admin_email: str, db: Session = Depends(get_db)):
+    """Download CSV error report generated during bulk student upload."""
+    get_admin_or_403(db, admin_email)
+
+    safe_report_id = re.sub(r"[^a-f0-9]", "", report_id.lower())
+    report_path = os.path.join(BULK_REPORTS_DIR, f"bulk_student_upload_errors_{safe_report_id}.csv")
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Error report not found")
+
+    return FileResponse(
+        report_path,
+        media_type="text/csv",
+        filename=f"bulk_student_upload_errors_{safe_report_id}.csv",
+    )
 
 @app.get("/admin/stats")
 def get_admin_stats(db: Session = Depends(get_db)):

@@ -460,7 +460,7 @@ async function loadResources() {
 // ============== VIEW SWITCHING ==============
 
 function switchView(viewName) {
-    const adminViews = ['manage-timetable', 'manage-announcements', 'manage-attendance', 'manage-resources'];
+    const adminViews = ['manage-timetable', 'manage-announcements', 'manage-attendance', 'manage-resources', 'manage-bulk-students'];
     const studentViews = ['dashboard', 'schedule', 'attendance', 'announcements', 'resources'];
 
     if (currentUser?.role === 'ADMIN' && studentViews.includes(viewName)) {
@@ -493,6 +493,8 @@ function switchView(viewName) {
             loadResources();
         } else if (viewName === 'manage-resources') {
             loadAllResources();
+        } else if (viewName === 'manage-bulk-students') {
+            resetBulkUploadView();
         }
     }
     
@@ -512,7 +514,8 @@ function switchView(viewName) {
         'manage-timetable': 'Manage Timetable',
         'manage-announcements': 'Manage Announcements',
         'manage-attendance': 'Manage Attendance',
-        'manage-resources': 'Manage Resources'
+        'manage-resources': 'Manage Resources',
+        'manage-bulk-students': 'Bulk Student Upload'
     };
     
     document.getElementById('pageTitle').textContent = titles[viewName] || 'Dashboard';
@@ -758,6 +761,7 @@ function saveAdminScope() {
     if (document.getElementById('view-manage-announcements') && !document.getElementById('view-manage-announcements').classList.contains('hidden')) loadAllAnnouncements();
     if (document.getElementById('view-manage-attendance') && !document.getElementById('view-manage-attendance').classList.contains('hidden')) loadAllAttendance();
     if (document.getElementById('view-manage-resources') && !document.getElementById('view-manage-resources').classList.contains('hidden')) loadAllResources();
+    if (document.getElementById('view-manage-bulk-students') && !document.getElementById('view-manage-bulk-students').classList.contains('hidden')) resetBulkUploadView();
 }
 
 function getSelectedValues(selectId) {
@@ -1294,6 +1298,102 @@ async function uploadAttendanceExcel() {
         loadAllAttendance();
     } catch (error) {
         showToast(error.message || 'Failed to upload attendance excel', 'error');
+    }
+}
+
+function resetBulkUploadView() {
+    const summary = document.getElementById('bulkUploadSummary');
+    const errorWrap = document.getElementById('bulkUploadErrorLinkWrap');
+    const credentialsBody = document.getElementById('bulkUploadCredentialsBody');
+
+    if (summary) {
+        summary.classList.add('hidden');
+        summary.innerHTML = '';
+    }
+    if (errorWrap) {
+        errorWrap.classList.add('hidden');
+    }
+    if (credentialsBody) {
+        credentialsBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No upload processed yet.</td></tr>';
+    }
+}
+
+async function uploadBulkStudents() {
+    const fileInput = document.getElementById('bulkStudentFileInput');
+    const notifyToggle = document.getElementById('bulkNotifyStudents');
+    const summary = document.getElementById('bulkUploadSummary');
+    const errorWrap = document.getElementById('bulkUploadErrorLinkWrap');
+    const errorLink = document.getElementById('bulkUploadErrorLink');
+    const credentialsBody = document.getElementById('bulkUploadCredentialsBody');
+
+    if (!fileInput || !fileInput.files.length) {
+        showToast('Select a .csv or .xlsx file first', 'warning');
+        return;
+    }
+
+    const selected = fileInput.files[0];
+    const fileName = (selected.name || '').toLowerCase();
+    if (!(fileName.endsWith('.csv') || fileName.endsWith('.xlsx'))) {
+        showToast('Only .csv and .xlsx files are allowed', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('admin_email', currentUser.email);
+    formData.append('send_notifications', String(Boolean(notifyToggle?.checked)));
+    formData.append('file', selected);
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/students/bulk-upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || 'Bulk upload failed');
+        }
+
+        const created = result.created_count || 0;
+        const failed = result.failed_count || 0;
+
+        if (summary) {
+            summary.classList.remove('hidden');
+            summary.innerHTML = `
+                <p class="font-semibold text-gray-800 mb-2">Upload Result</p>
+                <p>Accounts created: <strong>${created}</strong></p>
+                <p>Rows failed: <strong>${failed}</strong></p>
+                <p>Notifications sent: <strong>${result.notifications_sent || 0}</strong></p>
+            `;
+        }
+
+        if (errorWrap && errorLink && result.error_report_download_url) {
+            errorWrap.classList.remove('hidden');
+            errorLink.href = `${API_BASE}${result.error_report_download_url}`;
+        } else if (errorWrap) {
+            errorWrap.classList.add('hidden');
+        }
+
+        if (credentialsBody) {
+            const credentials = Array.isArray(result.credentials) ? result.credentials : [];
+            if (!credentials.length) {
+                credentialsBody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">No credentials generated.</td></tr>';
+            } else {
+                credentialsBody.innerHTML = credentials.map((entry) => `
+                    <tr>
+                        <td class="px-4 py-3 text-gray-700">${entry.name || '-'}</td>
+                        <td class="px-4 py-3 text-gray-700">${entry.email || '-'}</td>
+                        <td class="px-4 py-3 text-gray-700 font-medium">${entry.username || '-'}</td>
+                        <td class="px-4 py-3 text-gray-700 font-mono">${entry.password || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        showToast(`Bulk upload complete. Created: ${created}, Failed: ${failed}`, failed > 0 ? 'warning' : 'success');
+        fileInput.value = '';
+    } catch (error) {
+        showToast(error.message || 'Failed to upload students', 'error');
     }
 }
 
