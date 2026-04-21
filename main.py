@@ -4,10 +4,10 @@ College Campus Management System
 Built with FastAPI + SQLAlchemy
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from sqlalchemy import create_engine, Column, Integer, String, Text, Float, Date, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Text, Float, Date, DateTime, Boolean, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
@@ -527,7 +527,8 @@ def list_to_csv(values: Optional[List[Any]]) -> Optional[str]:
 
 
 def get_admin_or_403(db: Session, admin_email: str):
-    admin = db.query(User).filter(User.email == admin_email).first()
+    normalized_email = (admin_email or "").strip().strip('"').strip("'").lower()
+    admin = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if not admin or admin.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     return admin
@@ -1851,7 +1852,8 @@ def delete_attendance_record(student_email: str, subject_name: str, admin_email:
 
 @app.post("/admin/attendance/upload-excel")
 async def upload_attendance_excel(
-    admin_email: str = Form(...),
+    admin_email_form: Optional[str] = Form(None, alias="admin_email"),
+    admin_email_query: Optional[str] = Query(None, alias="admin_email"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -1859,6 +1861,7 @@ async def upload_attendance_excel(
     Upload attendance summary using Excel headers:
     student_email, subject_name, attended, total, dept, section, sem
     """
+    admin_email = admin_email_form or admin_email_query or ""
     admin = get_admin_or_403(db, admin_email)
     workbook = load_workbook(filename=io.BytesIO(await file.read()), data_only=True)
     sheet = workbook.active
@@ -1922,7 +1925,8 @@ async def upload_attendance_excel(
 
 @app.post("/admin/timetable/upload-excel")
 async def upload_timetable_excel(
-    admin_email: str = Form(...),
+    admin_email_form: Optional[str] = Form(None, alias="admin_email"),
+    admin_email_query: Optional[str] = Query(None, alias="admin_email"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -1932,6 +1936,7 @@ async def upload_timetable_excel(
     2) Matrix format: first col "time", day columns (monday..saturday), plus optional dept, section, sem.
        Each cell value: Subject|Room|Faculty|Resource (last three optional).
     """
+    admin_email = admin_email_form or admin_email_query or ""
     admin = get_admin_or_403(db, admin_email)
     workbook = load_workbook(filename=io.BytesIO(await file.read()), data_only=True)
     sheet = workbook.active
@@ -2056,7 +2061,8 @@ async def upload_timetable_excel(
 
 @app.post("/admin/announcements/upload-excel")
 async def upload_announcements_excel(
-    admin_email: str = Form(...),
+    admin_email_form: Optional[str] = Form(None, alias="admin_email"),
+    admin_email_query: Optional[str] = Query(None, alias="admin_email"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -2065,6 +2071,7 @@ async def upload_announcements_excel(
     title, body, priority, image_url, target_dept, target_depts, target_sections, target_semesters
     target_* list headers are comma-separated values.
     """
+    admin_email = admin_email_form or admin_email_query or ""
     admin = get_admin_or_403(db, admin_email)
     workbook = load_workbook(filename=io.BytesIO(await file.read()), data_only=True)
     sheet = workbook.active
