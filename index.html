@@ -1320,22 +1320,40 @@ console.log('🚀 Portal script initializing...');
 
 // API Configuration
 function resolveApiBase() {
+  function normalizeApiBase(rawBase) {
+    if (!rawBase || typeof rawBase !== 'string') return '';
+
+    let base = rawBase.trim().replace(/\/$/, '');
+
+    // Prevent invalid hosted URL patterns like https://app.onrender.com:8000
+    // while preserving local development URLs that intentionally use :8000.
+    if (/\.onrender\.com:8000$/i.test(base) || /\.netlify\.app:8000$/i.test(base)) {
+      base = base.replace(':8000', '');
+    }
+
+    return base;
+  }
+
   // Optional override: ?apiBase=http://127.0.0.1:8000
   const forcedBase = new URLSearchParams(window.location.search).get('apiBase');
   if (forcedBase) {
-    return forcedBase.replace(/\/$/, '');
+    return normalizeApiBase(forcedBase);
   }
 
   // Optional global override: window.API_BASE_URL = "https://your-backend.onrender.com"
   if (window.API_BASE_URL && typeof window.API_BASE_URL === 'string') {
-    return window.API_BASE_URL.replace(/\/$/, '');
+    return normalizeApiBase(window.API_BASE_URL);
   }
 
   // Optional persisted override in browser local storage
   try {
     const savedBase = localStorage.getItem('API_BASE_URL');
     if (savedBase) {
-      return savedBase.replace(/\/$/, '');
+      const normalizedSavedBase = normalizeApiBase(savedBase);
+      if (normalizedSavedBase !== savedBase) {
+        localStorage.setItem('API_BASE_URL', normalizedSavedBase);
+      }
+      return normalizedSavedBase;
     }
   } catch (err) {
     // Ignore storage access errors (private mode/policy restrictions)
