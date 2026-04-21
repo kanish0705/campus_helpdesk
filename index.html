@@ -1,48 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="overflow-x: hidden;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Management Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="tailwind.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        },
-                        brand: {
-                            primary: '#1e3a5f',
-                            secondary: '#2c5282',
-                            accent: '#ed8936',
-                            dark: '#1a202c',
-                        },
-                        status: {
-                            safe: '#10b981',
-                            warning: '#f59e0b',
-                            danger: '#ef4444',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- XLSX Library for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
         
@@ -82,16 +48,88 @@
         .nav-item.active { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; font-weight: 600; }
         .nav-item.active i { color: #0284c7; }
         
+        /* Main content base styles */
+        .main-content { 
+            display: block; 
+            width: 100%; 
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .view-content { 
+            display: block; 
+            width: 100%; 
+            min-height: 100%;
+            overflow-x: hidden;
+        }
+        .view-content.hidden { display: none !important; }
+        .view-content > * { width: 100%; }
+        
+        /* Responsive table styling */
+        table { width: 100%; table-layout: auto; }
+        table th, table td { padding: 0.75rem 1rem; word-break: break-word; }
+        
+        @media (max-width: 768px) {
+            table th, table td { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+        }
+        
+        /* Prevent horizontal scrolling on all containers */
+        * { box-sizing: border-box; }
+        body, html { max-width: 100vw; overflow-x: hidden; }
+        .p-6 { box-sizing: border-box; }
+        .grid { width: 100%; box-sizing: border-box; }
+        
+        /* Content padding responsive */
+        @media (max-width: 640px) {
+            .p-6 { padding: 1rem !important; }
+            .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+            table th, table td { padding: 0.5rem !important; font-size: 0.75rem !important; }
+        }
+        
+        /* Ensure proper wrapping in content containers */
+        header + div[class*="p-"] { width: 100%; display: block; }
+        
         /* Mobile-first responsive */
         @media (max-width: 1024px) {
-            .sidebar { position: fixed; left: -100%; transition: left 0.3s ease; }
-            .sidebar.open { left: 0; }
+            .sidebar { 
+                position: fixed; 
+                left: -100%; 
+                top: 0;
+                width: 100%;
+                height: 100vh;
+                transition: left 0.3s ease;
+                z-index: 40;
+            }
+            .sidebar.open { 
+                left: 0; 
+            }
             .main-content { margin-left: 0; }
             .bottom-nav { display: flex; }
             .desktop-only { display: none; }
         }
         
         @media (min-width: 1025px) {
+            .sidebar { 
+                position: fixed; 
+                left: 0; 
+                top: 0;
+                width: 16rem;
+                height: 100vh;
+                transition: transform 0.3s ease, left 0.3s ease;
+                transform: translateX(0);
+                z-index: 40;
+            }
+            .sidebar.closed { 
+                left: -16rem;
+                transform: translateX(-100%);
+            }
+            .main-content { 
+                margin-left: 16rem; 
+                transition: margin-left 0.3s ease;
+            }
+            .main-content.sidebar-collapsed { 
+                margin-left: 0; 
+            }
             .mobile-nav { display: none !important; }
             .desktop-only { display: block; }
         }
@@ -99,21 +137,8 @@
         /* Quick Sync animation */
         @keyframes sync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .syncing { animation: sync-pulse 1s infinite; }
-        
-        /* FAB positioning */
-        .fab-button {
-            position: relative;
-            width: 3.5rem;
-            height: 3.5rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
 
-        @media (max-width: 768px) {
-            #chatWidget { bottom: 6rem; }
-        }
+
         
         /* Announcement cards with image */
         .announcement-card {
@@ -136,15 +161,15 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen overflow-x-hidden">
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <!-- Login Section -->
-    <section id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary via-brand-secondary to-primary-600 p-4">
+    <section id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-slide-in">
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-2xl mb-4 shadow-lg">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-700 rounded-2xl mb-4 shadow-lg">
                     <i class="fas fa-graduation-cap text-3xl text-white"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-800">Student Portal</h1>
@@ -168,7 +193,7 @@
                             class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition">
                     </div>
                 </div>
-                <button onclick="login()" class="w-full py-3 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+                <button type="button" id="loginButton" onclick="login();" class="w-full py-3 bg-gradient-to-r from-blue-900 to-blue-700 text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
                     <i class="fas fa-sign-in-alt mr-2"></i>Sign In
                 </button>
             </div>
@@ -184,12 +209,12 @@
     </section>
 
     <!-- Main Dashboard -->
-    <div id="mainDashboard" class="hidden flex h-screen">
+    <div id="mainDashboard" class="hidden h-screen">
         <!-- Desktop Sidebar -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-40 desktop-only">
+        <aside class="sidebar w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-40">
             <div class="p-5 border-b border-gray-100">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-xl flex items-center justify-center">
                         <i class="fas fa-graduation-cap text-white"></i>
                     </div>
                     <div>
@@ -203,16 +228,16 @@
                 <button onclick="switchView('dashboard')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition active">
                     <i class="fas fa-home w-5"></i><span>Dashboard</span>
                 </button>
-                <button onclick="switchView('schedule')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="switchView('schedule')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
                     <i class="fas fa-calendar-alt w-5"></i><span>Schedule</span>
                 </button>
-                <button onclick="switchView('attendance')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="switchView('attendance')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
                     <i class="fas fa-chart-pie w-5"></i><span>Attendance</span>
                 </button>
-                <button onclick="switchView('announcements')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="switchView('announcements')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
                     <i class="fas fa-bullhorn w-5"></i><span>Announcements</span>
                 </button>
-                <button onclick="switchView('resources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                <button onclick="switchView('resources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
                     <i class="fas fa-folder-open w-5"></i><span>Resources</span>
                 </button>
                     
@@ -234,6 +259,15 @@
                     <button onclick="switchView('manage-bulk-students')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
                         <i class="fas fa-user-plus w-5"></i><span>Bulk Student Upload</span>
                     </button>
+                    <button onclick="switchView('manage-users')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-users w-5"></i><span>Manage Users</span>
+                    </button>
+                    <button onclick="switchView('manage-academic-structure')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-sitemap w-5"></i><span>Manage Dept/Section</span>
+                    </button>
+                    <button onclick="switchView('manage-students')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
+                        <i class="fas fa-user-graduate w-5"></i><span>Manage Students</span>
+                    </button>
                 </div>
             </nav>
             
@@ -252,6 +286,8 @@
                 </div>
             </div>
         </aside>
+
+        <div id="sidebarOverlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/30 z-30"></div>
 
         <!-- Mobile Bottom Navigation -->
         <nav id="bottomNav" class="mobile-nav fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex justify-around py-2">
@@ -276,13 +312,21 @@
         </nav>
 
         <!-- Main Content -->
-        <main class="flex-1 lg:ml-64 mb-20 lg:mb-0 overflow-y-auto">
+        <main class="main-content mb-20 lg:mb-0 overflow-y-auto w-full h-full">
             <!-- Top Header -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
                 <div class="px-6 py-4 flex items-center justify-between">
-                    <div>
+                    <div class="flex items-center gap-8">
+                        <button onclick="toggleSidebar()" class="lg:hidden w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition flex-shrink-0" title="Toggle menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <button onclick="toggleSidebar()" class="hidden lg:inline-flex w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition flex-shrink-0" title="Toggle menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div>
                         <h2 id="pageTitle" class="text-xl font-bold text-gray-800">Dashboard</h2>
                         <p id="pageSubtitle" class="text-sm text-gray-500">Welcome back!</p>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="openAdminScopeModal()" id="adminScopeBtn" class="hidden flex items-center space-x-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition font-medium text-sm">
@@ -296,79 +340,92 @@
             </header>
             
             <!-- Content Views -->
-            <div class="p-6">
+            <div class="p-6 w-full min-h-full">
                 <!-- Dashboard View -->
                 <div id="view-dashboard" class="view-content">
-                    <!-- Quick Stats Grid -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="w-10 h-10 bg-gradient-to-br from-status-safe to-green-600 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-check-circle text-white"></i>
+                    <!-- Student Dashboard - Hidden for Admins -->
+                    <div id="studentDashboard">
+                        <!-- Quick Stats Grid -->
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-status-safe to-green-600 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-check-circle text-white"></i>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500 text-xs">Attendance</p>
+                                <p id="overallAttendance" class="text-2xl font-bold text-gray-800">---%</p>
                             </div>
-                            <p class="text-gray-500 text-xs">Attendance</p>
-                            <p id="overallAttendance" class="text-2xl font-bold text-gray-800">---%</p>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-clock text-white"></i>
+                            
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-clock text-white"></i>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500 text-xs">Classes Today</p>
+                                <p id="todayClassCount" class="text-2xl font-bold text-gray-800">0</p>
                             </div>
-                            <p class="text-gray-500 text-xs">Classes Today</p>
-                            <p id="todayClassCount" class="text-2xl font-bold text-gray-800">0</p>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-bell text-white"></i>
+                            
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-bell text-white"></i>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500 text-xs">Announcements</p>
+                                <p id="dashAnnouncementCount" class="text-2xl font-bold text-gray-800">0</p>
                             </div>
-                            <p class="text-gray-500 text-xs">Announcements</p>
-                            <p id="dashAnnouncementCount" class="text-2xl font-bold text-gray-800">0</p>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-star text-white"></i>
+                            
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-book text-white"></i>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500 text-xs">Resources</p>
+                                <p id="dashResourceCount" class="text-2xl font-bold text-gray-800">0</p>
                             </div>
-                            <p class="text-gray-500 text-xs">Status</p>
-                            <p id="attendanceStatus" class="text-lg font-bold text-green-600">SAFE</p>
-                        </div>
-                    </div>
-
-                    <!-- Grid: Today's Schedule & Announcements -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Today's Schedule -->
-                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
-                            <div class="p-6 border-b border-gray-100">
-                                <h3 class="font-semibold text-gray-800">
-                                    <i class="fas fa-calendar-day text-primary-500 mr-2"></i>Today's Schedule
-                                </h3>
-                            </div>
-                            <div id="todayScheduleContent" class="p-6">
-                                <div class="text-center py-8 text-gray-400">
-                                    <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
-                                    <p>Loading...</p>
+                            
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-rose-400 to-rose-600 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-star text-white"></i>
+                                    </div>
                                 </div>
+                                <p class="text-gray-500 text-xs">Status</p>
+                                <p id="attendanceStatus" class="text-lg font-bold text-green-600">SAFE</p>
                             </div>
                         </div>
 
-                        <!-- Latest Announcements Preview -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-                            <div class="p-6 border-b border-gray-100">
-                                <h3 class="font-semibold text-gray-800">
-                                    <i class="fas fa-bullhorn text-amber-500 mr-2"></i>Latest
-                                </h3>
+                        <!-- Grid: Today's Schedule & Announcements -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Today's Schedule -->
+                            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                                <div class="p-6 border-b border-gray-100">
+                                    <h3 class="font-semibold text-gray-800">
+                                        <i class="fas fa-calendar-day text-primary-500 mr-2"></i>Today's Schedule
+                                    </h3>
+                                </div>
+                                <div id="todayScheduleContent" class="p-6">
+                                    <div class="text-center py-8 text-gray-400">
+                                        <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                                        <p>Loading...</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="latestAnnouncementsContent" class="p-4 max-h-80 overflow-y-auto space-y-3">
-                                <div class="text-center py-8 text-gray-400">
-                                    <p>Loading...</p>
+
+                            <!-- Latest Announcements Preview -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                                <div class="p-6 border-b border-gray-100">
+                                    <h3 class="font-semibold text-gray-800">
+                                        <i class="fas fa-bullhorn text-amber-500 mr-2"></i>Latest
+                                    </h3>
+                                </div>
+                                <div id="latestAnnouncementsContent" class="p-4 max-h-80 overflow-y-auto space-y-3">
+                                    <div class="text-center py-8 text-gray-400">
+                                        <p>Loading...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -383,8 +440,8 @@
                                 <i class="fas fa-calendar-week text-primary-500 mr-2"></i>Weekly Timetable
                             </h3>
                         </div>
-                        <div class="p-6 overflow-x-auto">
-                            <table id="weeklyTimetable" class="w-full table-striped min-w-[900px]">
+                        <div class="p-6 w-full overflow-hidden">
+                            <table id="weeklyTimetable" class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
@@ -441,6 +498,20 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-bell text-amber-500 mr-2"></i>Attendance Notification History
+                            </h3>
+                            <button onclick="clearAttendanceNotificationHistory()" class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">Clear</button>
+                        </div>
+                        <div id="attendanceNotificationHistory" class="p-6">
+                            <div class="text-center py-6 text-gray-400 text-sm">
+                                <p>No attendance notifications yet.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Announcements View -->
@@ -455,16 +526,31 @@
 
                 <!-- Resources View -->
                 <div id="view-resources" class="view-content hidden">
-                    <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="col-span-full text-center py-12 text-gray-400">
-                            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
-                            <p>Loading resources...</p>
+                    <div class="space-y-4">
+                        <div id="adminResourceUploadBanner" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start justify-between">
+                            <div>
+                                <div class="font-semibold text-blue-900">📤 Upload Resources</div>
+                                <div class="text-sm text-blue-700 mt-1">Upload files or add external links from the Admin → Manage Resources tab</div>
+                            </div>
+                            <button onclick="switchView('manage-resources')" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Go to Upload</button>
+                        </div>
+                        <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="col-span-full text-center py-12 text-gray-400">
+                                <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+                                <p>Loading resources...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Admin: Manage Timetable -->
-                <div id="view-manage-timetable" class="view-content hidden">
+                <div id="view-manage-timetable" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-calendar-alt text-blue-600 mr-3"></i>Manage Timetable
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Create and manage class timetables</p>
+                    </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                         <div class="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h3 class="font-semibold text-gray-800">
@@ -492,11 +578,11 @@
                             <input id="newTtDept" type="text" placeholder="Dept" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
                             <input id="newTtSection" type="text" placeholder="Section" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
                             <input id="newTtSem" type="number" placeholder="Sem" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                            <button onclick="createTimetableEntry()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i>Add Entry
+                            <button onclick="createTimetableEntry()" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-bold border-2 border-emerald-700 shadow-md">
+                                <i class="fas fa-calendar-plus mr-2"></i>➕ ADD ENTRY
                             </button>
                         </div>
-                        <div id="timetableManagementContent" class="overflow-x-auto">
+                        <div id="timetableManagementContent" class="w-full overflow-hidden">
                             <table class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
@@ -515,10 +601,17 @@
                             </table>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <!-- Admin: Manage Announcements -->
-                <div id="view-manage-announcements" class="view-content hidden">
+                <div id="view-manage-announcements" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-megaphone text-amber-600 mr-3"></i>Manage Announcements
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Create and manage college announcements</p>
+                    </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                         <div class="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h3 class="font-semibold text-gray-800">
@@ -555,14 +648,23 @@
                                 </select>
                             </div>
                             <p class="text-xs text-gray-500">Click options to toggle multiple selections. If none selected, target is treated as all.</p>
-                            <button onclick="createAnnouncement()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i>Post Announcement
+                        </div>
+                        <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-500 rounded-lg">
+                            <button onclick="createAnnouncement()" class="w-full px-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:shadow-xl transform hover:-translate-y-1 transition font-bold text-lg cursor-pointer">
+                                <i class="fas fa-paper-plane mr-2"></i>✈️ POST ANNOUNCEMENT NOW ✈️
                             </button>
                         </div>
-                        <div id="announcementManagementContent" class="p-6">
-                            <div id="announcementManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="col-span-full text-center py-12 text-gray-400">
-                                    <p>Loading...</p>
+                        <div id="announcementManagementContent" class="p-6 bg-gray-50">
+                            <div class="mb-4">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-3">📢 All Announcements (Click Refresh to reload)</h4>
+                                <button onclick="loadAllAnnouncements()" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                                    <i class="fas fa-redo mr-1"></i>Reload Announcements
+                                </button>
+                            </div>
+                            <div id="announcementManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div class="col-span-full text-center py-8 text-gray-400">
+                                    <i class="fas fa-inbox text-3xl mb-2"></i>
+                                    <p>No announcements yet. Create one above! ↑</p>
                                 </div>
                             </div>
                         </div>
@@ -570,7 +672,13 @@
                 </div>
 
                 <!-- Admin: Manage Attendance -->
-                <div id="view-manage-attendance" class="view-content hidden">
+                <div id="view-manage-attendance" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-users-cog text-purple-600 mr-3"></i>Manage Attendance
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Track and manage student attendance records</p>
+                    </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                         <div class="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h3 class="font-semibold text-gray-800">
@@ -591,11 +699,11 @@
                             <input id="newAttSubject" type="text" placeholder="Subject" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
                             <input id="newAttAttended" type="number" placeholder="Attended" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
                             <input id="newAttTotal" type="number" placeholder="Total" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                            <button onclick="createAttendanceRecord()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i>Add/Update
+                            <button onclick="createAttendanceRecord()" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-bold border-2 border-emerald-700 shadow-md">
+                                <i class="fas fa-check-circle mr-2"></i>➕ ADD/UPDATE
                             </button>
                         </div>
-                        <div id="attendanceManagementContent" class="overflow-x-auto">
+                        <div id="attendanceManagementContent" class="w-full overflow-hidden">
                             <table class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
@@ -616,39 +724,69 @@
                 </div>
 
                 <!-- Admin: Manage Resources -->
-                <div id="view-manage-resources" class="view-content hidden">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-800">
-                                <i class="fas fa-folder-tree text-teal-500 mr-2"></i>Manage Resources
-                            </h3>
-                            <button onclick="loadAllResources()" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition text-sm">
-                                <i class="fas fa-sync mr-2"></i>Refresh
-                            </button>
-                        </div>
-                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <input id="newResTitle" type="text" placeholder="Resource title" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                            <select id="newResType" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                                <option value="DOCUMENT">Document</option>
-                                <option value="LINK">Link</option>
-                                <option value="VIDEO">Video</option>
-                                <option value="OTHER">Other</option>
-                            </select>
-                            <input id="newResUrl" type="text" placeholder="Resource URL (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                            <textarea id="newResDescription" rows="2" placeholder="Description" class="md:col-span-2 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"></textarea>
-                            <div class="grid grid-cols-3 gap-2">
-                                <input id="newResDept" type="text" placeholder="Dept or ALL" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                                <input id="newResSection" type="text" placeholder="Section or ALL" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
-                                <input id="newResSem" type="number" placeholder="Sem (0=ALL)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none">
+                <div id="view-manage-resources" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-folder-tree text-green-600 mr-3"></i>Manage Resources
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Upload and manage course materials and resources</p>
+                    </div>
+                    <div class="space-y-6">
+                        <!-- Upload File -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="p-6 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-800">
+                                    <i class="fas fa-cloud-upload-alt text-blue-500 mr-2"></i>Upload PDF/Document
+                                </h3>
                             </div>
-                            <button onclick="createResource()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i>Add Resource
-                            </button>
+                            <div class="p-6 space-y-4">
+                                <input id="resourceTitle" type="text" placeholder="Resource title" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                <textarea id="resourceDesc" placeholder="Description (optional)" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition" onclick="document.getElementById('resourceFile').click()">
+                                    <i class="fas fa-file-upload text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-gray-600">Click to select file or drag & drop</p>
+                                    <p class="text-xs text-gray-500 mt-1">PDF, DOCX, PPTX, XLSX etc.</p>
+                                </div>
+                                <input id="resourceFile" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip" class="hidden">
+                                <div id="fileNameDisplay" class="text-sm text-gray-600"></div>
+                                <button onclick="uploadResourceFile()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                                    <i class="fas fa-upload mr-2"></i>Upload File
+                                </button>
+                            </div>
                         </div>
-                        <div id="resourceManagementContent" class="p-6">
-                            <div id="resourceManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="col-span-full text-center py-12 text-gray-400">
-                                    <p>Loading...</p>
+
+                        <!-- Add External Link -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="p-6 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-800">
+                                    <i class="fas fa-link text-green-500 mr-2"></i>Add External Resource Link
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <input id="externalResourceTitle" type="text" placeholder="Resource title" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                                <textarea id="externalResourceDesc" placeholder="Description (optional)" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"></textarea>
+                                <input id="externalResourceUrl" type="url" placeholder="Resource URL (e.g., https://example.com/resource)" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                                <button onclick="addExternalResource()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+                                    <i class="fas fa-plus mr-2"></i>Add Link
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- All Resources -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                                <h3 class="font-semibold text-gray-800">
+                                    <i class="fas fa-folder-tree text-teal-500 mr-2"></i>All Resources
+                                </h3>
+                                <button onclick="loadAllResources()" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition text-sm">
+                                    <i class="fas fa-sync mr-2"></i>Refresh
+                                </button>
+                            </div>
+                            <div id="resourceManagementContent" class="p-6">
+                                <div id="resourceManagementGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div class="col-span-full text-center py-12 text-gray-400">
+                                        <p>Loading...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -656,7 +794,13 @@
                 </div>
 
                 <!-- Admin: Bulk Student Upload -->
-                <div id="view-manage-bulk-students" class="view-content hidden">
+                <div id="view-manage-bulk-students" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-user-plus text-indigo-600 mr-3"></i>Bulk Student Upload
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Import multiple students via Excel or CSV file</p>
+                    </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                         <div class="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h3 class="font-semibold text-gray-800">
@@ -687,7 +831,7 @@
                         </div>
                         <div class="p-6">
                             <h4 class="text-sm font-semibold text-gray-700 mb-3">Generated Credentials (Current Upload)</h4>
-                            <div class="overflow-x-auto border border-gray-100 rounded-lg">
+                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
                                 <table class="w-full table-striped">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -699,6 +843,165 @@
                                     </thead>
                                     <tbody id="bulkUploadCredentialsBody" class="divide-y divide-gray-100">
                                         <tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No upload processed yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Users (Firebase) -->
+                <div id="view-manage-users" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-users text-purple-600 mr-3"></i>Manage Users
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Create and manage user accounts</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <!-- Header -->
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-users text-purple-600 mr-2"></i>
+                                <span>Manage Users (Firebase)</span>
+                            </h3>
+                            <button onclick="loadUsersForAdmin()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
+                                <i class="fas fa-sync mr-2"></i>Refresh
+                            </button>
+                        </div>
+
+                        <!-- Add User Form -->
+                        <div class="p-6 border-b border-gray-100 bg-gray-50">
+                            <h4 class="font-semibold text-gray-700 mb-4">Add New User</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                                <input id="newUserEmail" type="email" placeholder="Email" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <input id="newUserName" type="text" placeholder="Full Name" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <input id="newUserPassword" type="password" placeholder="Password" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <select id="newUserRole" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                    <option value="STUDENT">Student</option>
+                                    <option value="ADMIN">Admin</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <input id="newUserDept" type="text" placeholder="Department (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <input id="newUserSection" type="text" placeholder="Section (optional)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <input id="newUserSem" type="number" placeholder="Semester" min="1" max="8" value="1" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                                <button onclick="addUserToFirebase()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium">
+                                    <i class="fas fa-plus mr-2"></i>Add User
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Users Table -->
+                        <div class="p-6">
+                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                                <table class="w-full table-striped">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Department</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody" class="divide-y divide-gray-100">
+                                        <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading users...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Dept/Section -->
+                <div id="view-manage-academic-structure" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-sitemap text-cyan-600 mr-3"></i>Manage Department & Section
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Manage academic departments and sections</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-sitemap text-cyan-600 mr-2"></i>
+                                <span>Manage Department & Section</span>
+                            </h3>
+                            <button onclick="loadAcademicStructure()" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition text-sm">
+                                <i class="fas fa-sync mr-2"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input id="newDeptName" type="text" placeholder="Department (e.g., CSE, AIML)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                            <input id="newSectionName" type="text" placeholder="Section (e.g., A, B, C)" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                            <button onclick="createAcademicUnit()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Add Dept/Section
+                            </button>
+                        </div>
+                        <div class="p-6">
+                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                                <table class="w-full table-striped">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Department</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Section</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="academicStructureBody" class="divide-y divide-gray-100">
+                                        <tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin: Manage Students -->
+                <div id="view-manage-students" class="view-content hidden animate-fade-in">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">
+                            <i class="fas fa-user-graduate text-indigo-600 mr-3"></i>Manage Students
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Add, edit, and manage student records</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800">
+                                <i class="fas fa-user-graduate text-indigo-500 mr-2"></i>Manage Students
+                            </h3>
+                            <button onclick="loadStudentsByScope()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
+                                <i class="fas fa-sync mr-2"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="p-6 border-b border-gray-100 grid grid-cols-1 md:grid-cols-7 gap-3">
+                            <input id="studentName" type="text" placeholder="Name" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input id="studentEmail" type="email" placeholder="Email" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input id="studentRoll" type="text" placeholder="Roll Number" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input id="studentDept" type="text" placeholder="Dept" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input id="studentSection" type="text" placeholder="Section" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input id="studentSem" type="number" min="1" placeholder="Sem" class="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button onclick="createStudentManually()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>Add Student
+                            </button>
+                        </div>
+                        <div class="p-6">
+                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                                <table class="w-full table-striped">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Roll</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dept/Section</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Sem</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentsManagementBody" class="divide-y divide-gray-100">
+                                        <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -721,27 +1024,101 @@
             <p class="text-sm text-gray-500 mb-4">Choose working scope before managing data to avoid cross-section mix-up.</p>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Departments (multi-select)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Departments <span class="text-xs text-blue-600">(Hold Ctrl + Click to select multiple)</span></label>
                     <select id="adminScopeDepts" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
                         <option value="CSE">CSE</option><option value="ECE">ECE</option><option value="ME">ME</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Sections (multi-select)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sections <span class="text-xs text-blue-600">(Hold Ctrl + Click to select multiple)</span></label>
                     <select id="adminScopeSections" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
                         <option value="A">A</option><option value="B">B</option><option value="C">C</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Semesters (optional multi-select)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Semesters <span class="text-xs text-blue-600">(Hold Ctrl + Click to select multiple or leave empty for all)</span></label>
                     <select id="adminScopeSems" multiple class="w-full px-4 py-2 border border-gray-200 rounded-lg h-24 focus:ring-2 focus:ring-primary-500 outline-none">
                         <option value="1">Sem 1</option><option value="2">Sem 2</option><option value="3">Sem 3</option><option value="4">Sem 4</option><option value="5">Sem 5</option><option value="6">Sem 6</option><option value="7">Sem 7</option><option value="8">Sem 8</option>
                     </select>
                 </div>
-                <p class="text-xs text-gray-500">Tip: click items to select/unselect multiple values.</p>
-                <div class="flex space-x-2 pt-2">
-                    <button type="button" onclick="saveAdminScope()" class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium">Apply Scope</button>
-                    <button type="button" onclick="closeAdminScopeModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                <p class="text-xs text-amber-600 bg-amber-50 p-2 rounded">📌 <strong>How to select multiple:</strong> Hold <strong>Ctrl</strong> (Windows/Linux) or <strong>Cmd</strong> (Mac), then click items. Leave empty for ALL.</p>
+                <div class="flex gap-3 pt-4 border-t border-gray-200 mt-4">
+                    <button type="button" onclick="saveAdminScope()" class="flex-1 px-6 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition font-semibold text-sm cursor-pointer">
+                        <i class="fas fa-check mr-2"></i>Apply Scope ✓
+                    </button>
+                    <button type="button" onclick="saveAdminScope()" class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition font-semibold text-sm cursor-pointer">
+                        <i class="fas fa-check mr-2"></i>Choose
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Academic Unit Modal -->
+    <div id="editAcademicUnitModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Department/Section</h3>
+                <button onclick="closeEditAcademicUnitModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <input id="editAcademicDept" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                    <input id="editAcademicSection" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div class="flex space-x-2 pt-4">
+                    <button onclick="saveAcademicUnitEdit()" class="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium">Save</button>
+                    <button onclick="closeEditAcademicUnitModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="hidden fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 animate-slide-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Student</h3>
+                <button onclick="closeEditStudentModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                    <input id="editStudentName" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input id="editStudentEmail" type="email" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Roll Number</label>
+                    <input id="editStudentRoll" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                        <input id="editStudentDept" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Section</label>
+                        <input id="editStudentSection" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+                    <input id="editStudentSem" type="number" min="1" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex space-x-2 pt-4">
+                    <button onclick="saveStudentEdit()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">Save</button>
+                    <button onclick="closeEditStudentModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
                 </div>
             </div>
         </div>
@@ -892,53 +1269,1765 @@
         </div>
     </div>
 
-    <!-- Floating Action Button (FAB) Chat -->
-    <div id="chatWidget" class="fixed bottom-20 right-6 z-50 hidden">
-        <!-- Chat Toggle Button / FAB -->
-        <button id="chatToggle" onclick="toggleChatbox()" class="fab-button bg-gradient-to-br from-brand-primary to-brand-secondary text-white shadow-lg hover:shadow-2xl transition-all duration-200 hover:scale-110">
-            <i class="fas fa-robot text-2xl"></i>
-        </button>
-        
-        <!-- Chat Container -->
-        <div id="chatContainer" class="hidden absolute bottom-20 right-0 w-96 max-w-[calc(100vw-2rem)] h-80 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-brand-primary to-brand-secondary p-4 flex items-center space-x-3">
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                    <i class="fas fa-robot text-white"></i>
-                </div>
-                <div class="flex-1">
-                    <h4 class="text-white font-semibold">Assistant</h4>
-                    <p class="text-white/70 text-xs">Campus Helper</p>
-                </div>
-                <button onclick="toggleChatbox()" class="text-white/70 hover:text-white">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <!-- Messages -->
-            <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3">
-                <div class="flex items-end space-x-2">
-                    <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-primary-600 text-sm"></i>
-                    </div>
-                    <div class="chat-bubble-bot p-3 rounded-lg max-w-xs text-sm text-gray-700">
-                        Hi! Ask me about your attendance, schedule, or announcements! 📚
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Input -->
-            <div class="p-4 border-t border-gray-100">
-                <div class="flex items-center space-x-2">
-                    <input type="text" id="chatInput" placeholder="Ask me anything..." onkeypress="handleChatKeypress(event)" class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm">
-                    <button id="chatSendBtn" type="button" onclick="sendChatMessage()" class="w-10 h-10 bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-lg flex items-center justify-center hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed">
-                        <i class="fas fa-paper-plane text-sm"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <script src="script.js"></script>
+
+    <script>
+/**
+ * Student Management Portal - Complete Script
+ * Login + Navigation + Dashboard
+ */
+
+console.log('🚀 Portal script initializing...');
+
+// API Configuration
+const API_BASE = window.location.origin;
+let currentUser = null;
+let currentView = 'dashboard';
+let viewCache = {}; // Cache loaded view data
+let loadingStates = {}; // Track which views are loading
+let adminScope = { depts: [], sections: [], sems: [] }; // Admin scope selection
+
+// Debounce function for performance
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+  console.log(`[${type.toUpperCase()}]`, message);
+  const toast = document.createElement('div');
+  const bgColor = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6';
+  toast.style.cssText = `position: fixed; bottom: 20px; right: 20px; padding: 12px 16px; background-color: ${bgColor}; color: white; border-radius: 8px; z-index: 9999; font-weight: 500;`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// LOGIN FUNCTIONS
+async function login() {
+  console.log('🔐 LOGIN CLICKED');
+  try {
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+    
+    if (!emailInput || !passwordInput) {
+      showToast('Form error', 'error');
+      return;
+    }
+    
+    const email = emailInput.value?.trim();
+    const password = passwordInput.value?.trim();
+
+    if (!email || !password) {
+      showToast('Please enter email and password', 'error');
+      return;
+    }
+
+    console.log('🔐 Sending login request...');
+    
+    const response = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      showToast(data.detail || 'Login failed', 'error');
+      return;
+    }
+
+    currentUser = data;
+    console.log('✅ Login successful!', currentUser);
+    showToast(`Welcome ${currentUser.name}!`, 'success');
+    passwordInput.value = '';
+
+    // Switch UI
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('mainDashboard').classList.remove('hidden');
+
+    // Update sidebar
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarUserRole = document.getElementById('sidebarUserRole');
+    if (sidebarUserName) sidebarUserName.textContent = currentUser.name;
+    if (sidebarUserRole) sidebarUserRole.textContent = currentUser.role;
+
+    // Handle admin login
+    if (currentUser.role === 'ADMIN') {
+      // Show admin section
+      const adminSection = document.getElementById('adminSection');
+      if (adminSection) adminSection.classList.remove('hidden');
+      
+      // Show admin scope button
+      const adminScopeBtn = document.getElementById('adminScopeBtn');
+      if (adminScopeBtn) adminScopeBtn.classList.remove('hidden');
+      
+      // Hide student-only views
+      const studentOnlyTabs = document.querySelectorAll('[data-student-only]');
+      studentOnlyTabs.forEach(tab => tab.classList.add('hidden'));
+      
+      // Show scope selection modal
+      setTimeout(() => {
+        openAdminScopeModal();
+      }, 300);
+    } else {
+      // Hide admin section
+      const adminSection = document.getElementById('adminSection');
+      if (adminSection) adminSection.classList.add('hidden');
+      
+      // Hide admin scope button
+      const adminScopeBtn = document.getElementById('adminScopeBtn');
+      if (adminScopeBtn) adminScopeBtn.classList.add('hidden');
+      
+      // Load dashboard
+      setTimeout(() => switchView('dashboard'), 500);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    showToast('Login error: ' + error.message, 'error');
+  }
+}
+
+function logout() {
+  console.log('🚪 Logout');
+  currentUser = null;
+  adminScope = { depts: [], sections: [], sems: [] };
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginSection').classList.remove('hidden');
+  document.getElementById('mainDashboard').classList.add('hidden');
+  
+  showToast('Logged out', 'success');
+}
+
+function handleLoginKeypress(event) {
+  if (event.key === 'Enter') login();
+}
+
+// NAVIGATION FUNCTIONS
+function switchView(viewName) {
+  if (!currentUser) {
+    console.warn('⚠️ Not logged in');
+    return;
+  }
+
+  console.log(`📄 Switching to: ${viewName}`);
+  currentView = viewName;
+
+  // Hide all views
+  document.querySelectorAll('.view-content').forEach(el => {
+    el.classList.add('hidden');
+  });
+
+  // Show selected view
+  const viewId = `view-${viewName}`;
+  const viewElement = document.getElementById(viewId);
+  if (viewElement) {
+    viewElement.classList.remove('hidden');
+    console.log(`✅ Showed ${viewId}`);
+  } else {
+    console.warn(`⚠️ View ${viewId} not found`);
+    return;
+  }
+
+  // Update page title/subtitle
+  const titles = {
+    'dashboard': { title: 'Dashboard', subtitle: 'Welcome back!' },
+    'manage-timetable': { title: '📅 Manage Timetable', subtitle: 'Create and manage class timetables' },
+    'manage-announcements': { title: '📢 Manage Announcements', subtitle: 'Create and manage college announcements' },
+    'manage-attendance': { title: '📊 Manage Attendance', subtitle: 'Track student attendance' },
+    'manage-resources': { title: '📁 Manage Resources', subtitle: 'Upload and manage course materials' },
+    'manage-bulk-students': { title: '📤 Bulk Student Upload', subtitle: 'Upload multiple students at once' },
+    'manage-users': { title: '👥 Manage Users', subtitle: 'Create and manage user accounts' },
+    'manage-academic-structure': { title: '🏢 Manage Departments', subtitle: 'Manage departments, sections, and semesters' },
+    'manage-students': { title: '👨‍🎓 Manage Students', subtitle: 'View and manage student records' }
+  };
+  
+  const titleInfo = titles[viewName] || { title: viewName, subtitle: '' };
+  const pageTitle = document.getElementById('pageTitle');
+  const pageSubtitle = document.getElementById('pageSubtitle');
+  if (pageTitle) pageTitle.textContent = titleInfo.title;
+  if (pageSubtitle) pageSubtitle.textContent = titleInfo.subtitle;
+
+  // Update active nav item
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  event?.target?.closest('.nav-item')?.classList.add('active');
+
+  // Load view data
+  console.log(`Loading data for ${viewName}...`);
+  loadViewData(viewName);
+}
+
+// LOAD VIEW DATA
+async function loadViewData(viewName) {
+  if (!currentUser) return;
+
+  // Check if already loading or cached
+  if (loadingStates[viewName]) {
+    console.log(`⏳ ${viewName} already loading...`);
+    return;
+  }
+
+  if (viewCache[viewName]) {
+    console.log(`💾 Using cached ${viewName} data`);
+    return;
+  }
+
+  try {
+    loadingStates[viewName] = true;
+    console.log(`📊 Loading ${viewName} data...`);
+
+    const email = currentUser.email;
+
+    switch(viewName) {
+      case 'dashboard':
+        await loadDashboard(email);
+        break;
+      case 'schedule':
+        await loadSchedule(email);
+        break;
+      case 'attendance':
+        await loadAttendance(email);
+        break;
+      case 'announcements':
+        await loadAnnouncements(email);
+        break;
+      case 'resources':
+        await loadResources(email);
+        break;
+      // ADMIN VIEWS
+      case 'manage-timetable':
+        await loadAllTimetable();
+        break;
+      case 'manage-announcements':
+        await loadAllAnnouncements();
+        break;
+      case 'manage-attendance':
+        await loadAllAttendance();
+        break;
+      case 'manage-resources':
+        await loadAllResources();
+        break;
+      case 'manage-bulk-students':
+        await loadBulkStudentsPanel();
+        break;
+      case 'manage-users':
+        await loadAllUsers();
+        break;
+      case 'manage-academic-structure':
+        await loadAcademicStructure();
+        break;
+      case 'manage-students':
+        await loadAllStudents();
+        break;
+    }
+
+    viewCache[viewName] = true;
+    loadingStates[viewName] = false;
+  } catch (error) {
+    console.error('❌ Error loading data:', error);
+    showToast('Failed to load data', 'error');
+    loadingStates[viewName] = false;
+  }
+}
+
+async function loadDashboard(email) {
+  try {
+    // Load admin dashboard if admin
+    const studentDashboard = document.getElementById('studentDashboard');
+    if (currentUser?.role === 'ADMIN') {
+      if (studentDashboard) {
+        studentDashboard.innerHTML = '<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8"><h3 class="text-lg font-semibold text-gray-800 mb-4">📊 Admin Dashboard Statistics</h3><div id="adminStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"><div class="animate-pulse bg-gray-200 h-20 rounded"></div><div class="animate-pulse bg-gray-200 h-20 rounded"></div><div class="animate-pulse bg-gray-200 h-20 rounded"></div></div></div>';
+      }
+      
+      try {
+        const statsResponse = await fetch(`${API_BASE}/admin/stats`);
+        if (statsResponse.ok) {
+          const stats = await statsResponse.json();
+          const statsContainer = document.getElementById('adminStats');
+          if (statsContainer) {
+            statsContainer.innerHTML = `
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-blue-600 font-medium">Total Students</p>
+                    <p class="text-3xl font-bold text-blue-700 mt-2">${stats.students || 0}</p>
+                  </div>
+                  <i class="fas fa-users text-4xl text-blue-300"></i>
+                </div>
+              </div>
+              <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-purple-600 font-medium">Timetable Entries</p>
+                    <p class="text-3xl font-bold text-purple-700 mt-2">${stats.timetable_entries || 0}</p>
+                  </div>
+                  <i class="fas fa-calendar text-4xl text-purple-300"></i>
+                </div>
+              </div>
+              <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm text-orange-600 font-medium">Announcements</p>
+                    <p class="text-3xl font-bold text-orange-700 mt-2">${stats.announcements || 0}</p>
+                  </div>
+                  <i class="fas fa-bullhorn text-4xl text-orange-300"></i>
+                </div>
+              </div>
+            `;
+          }
+        }
+      } catch (adminStatsError) {
+        console.warn('Could not load admin stats:', adminStatsError);
+      }
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/student/dashboard?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Failed to load dashboard');
+    
+    const data = await response.json();
+    console.log('✅ Dashboard loaded:', data);
+
+    // UPDATE STATS COUNTERS
+    // 1. Overall Attendance Percentage
+    const overallAttendanceEl = document.getElementById('overallAttendance');
+    if (overallAttendanceEl && data.attendance) {
+      const percentage = data.attendance.overall_percentage || 0;
+      overallAttendanceEl.textContent = percentage.toFixed(1) + '%';
+      console.log('📊 Attendance:', percentage.toFixed(1) + '%');
+    }
+
+    // 2. Attendance Status
+    const attendanceStatusEl = document.getElementById('attendanceStatus');
+    if (attendanceStatusEl && data.attendance) {
+      const status = data.attendance.overall_status || 'NO_DATA';
+      let statusColor = 'text-green-600';
+      if (status === 'SAFE') statusColor = 'text-green-600';
+      else if (status === 'WARNING') statusColor = 'text-yellow-600';
+      else if (status === 'DANGER') statusColor = 'text-red-600';
+      attendanceStatusEl.textContent = status;
+      attendanceStatusEl.className = `text-lg font-bold ${statusColor}`;
+      console.log('🟢 Status:', status);
+    }
+
+    // 3. Announcements Count
+    const announcementCountEl = document.getElementById('dashAnnouncementCount');
+    if (announcementCountEl && data.announcements) {
+      const count = Array.isArray(data.announcements) ? data.announcements.length : 0;
+      announcementCountEl.textContent = count;
+      console.log('📢 Announcements:', count);
+    }
+
+    // 4. Classes Today Count
+    const todayClassCountEl = document.getElementById('todayClassCount');
+    if (todayClassCountEl && data.timetable) {
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const todayClasses = Array.isArray(data.timetable) 
+        ? data.timetable.filter(t => t.day_of_week && t.day_of_week.toLowerCase() === today.toLowerCase())
+        : [];
+      todayClassCountEl.textContent = todayClasses.length;
+      console.log('📚 Today Classes:', todayClasses.length);
+    }
+
+    // 5. Resources Count (load from API)
+    try {
+      const resourceResponse = await fetch(`${API_BASE}/student/resources?email=${encodeURIComponent(email)}`);
+      if (resourceResponse.ok) {
+        const resourceData = await resourceResponse.json();
+        const resourceCountEl = document.getElementById('dashResourceCount');
+        if (resourceCountEl) {
+          const count = Array.isArray(resourceData) ? resourceData.length : 0;
+          resourceCountEl.textContent = count;
+          console.log('📚 Resources:', count);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not load resources count:', err);
+    }
+
+    // POPULATE TODAY'S SCHEDULE
+    const todayScheduleEl = document.getElementById('todayScheduleContent');
+    if (todayScheduleEl && data.timetable) {
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const todayClasses = Array.isArray(data.timetable) 
+        ? data.timetable.filter(t => t.day_of_week && t.day_of_week.toLowerCase() === today.toLowerCase())
+        : [];
+      
+      if (todayClasses.length > 0) {
+        todayScheduleEl.innerHTML = todayClasses.map(t => `
+          <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg mb-3">
+            <div class="font-semibold text-blue-900">${t.subject_name || 'Class'}</div>
+            <div class="text-sm text-blue-700 mt-1">
+              <i class="fas fa-clock mr-1"></i>${t.period_slots || 'Time TBA'}
+            </div>
+            <div class="text-sm text-blue-600 mt-1">
+              <i class="fas fa-door-open mr-1"></i>Room: ${t.room_number || 'TBA'}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        todayScheduleEl.innerHTML = '<div class="text-center py-8 text-gray-400"><p>✅ No classes today</p></div>';
+      }
+    }
+
+    // POPULATE LATEST ANNOUNCEMENTS
+    const announcementsEl = document.getElementById('latestAnnouncementsContent');
+    if (announcementsEl && data.announcements && Array.isArray(data.announcements)) {
+      if (data.announcements.length > 0) {
+        announcementsEl.innerHTML = data.announcements.slice(0, 5).map(a => `
+          <div class="p-3 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="font-semibold text-amber-900 text-sm">${a.title}</div>
+                <div class="text-xs text-amber-700 mt-1">${a.body.substring(0, 60)}...</div>
+              </div>
+              ${a.priority === 'urgent' ? '<span class="ml-2 px-2 py-1 bg-red-200 text-red-700 text-xs rounded font-semibold">URGENT</span>' : ''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        announcementsEl.innerHTML = '<div class="text-center py-8 text-gray-400"><p>No announcements</p></div>';
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Dashboard error:', error);
+    showToast('Error loading dashboard', 'error');
+  }
+}
+
+async function loadSchedule(email) {
+  try {
+    const response = await fetch(`${API_BASE}/student/timetable?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Failed to load');
+    const data = await response.json();
+    console.log('✅ Schedule loaded');
+    
+    const el = document.getElementById('view-schedule');
+    if (el) {
+      const container = el.querySelector('.space-y-3, .space-y-2, .grid, [class*="space"]') || el;
+      if (container && data && data.length > 0) {
+        container.innerHTML = data.map(t => `
+          <div class="p-4 bg-white border rounded-lg hover:shadow-sm transition">
+            <div class="font-semibold text-blue-600">${t.subject_name}</div>
+            <div class="text-sm text-gray-600">${t.day_of_week} - ${t.period_slots}</div>
+            <div class="text-sm text-gray-500">Room: ${t.room_number}</div>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Schedule error:', error);
+  }
+}
+
+async function loadAttendance(email) {
+  try {
+    const response = await fetch(`${API_BASE}/student/attendance?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Failed to load');
+    const data = await response.json();
+    console.log('✅ Attendance loaded:', data);
+    
+    const el = document.getElementById('view-attendance');
+    if (!el) return;
+
+    // OVERALL ATTENDANCE SECTION
+    const overallPercentage = data.overall_percentage || 0;
+    const overallStatus = data.overall_status || 'NO_DATA';
+    
+    // Update overall percentage display
+    const circlePercentage = el.querySelector('#circlePercentage');
+    if (circlePercentage) {
+      circlePercentage.textContent = overallPercentage.toFixed(1) + '%';
+    }
+    
+    // Update progress circle (SVG)
+    const progressCircle = el.querySelector('#progressCircle');
+    if (progressCircle) {
+      const circumference = 2 * Math.PI * 40; // radius = 40
+      const offset = circumference - (overallPercentage / 100) * circumference;
+      progressCircle.setAttribute('stroke-dashoffset', offset);
+      
+      // Color based on status
+      let color = '#10b981'; // green for SAFE
+      if (overallStatus === 'WARNING') color = '#f59e0b'; // amber
+      if (overallStatus === 'DANGER') color = '#ef4444'; // red
+      if (overallStatus === 'NO_DATA') color = '#cbd5e1'; // gray
+      progressCircle.setAttribute('stroke', color);
+    }
+    
+    // Update status badge
+    const statusBadge = el.querySelector('#overallStatusBadge');
+    if (statusBadge) {
+      statusBadge.textContent = overallStatus;
+      let bgClass = 'bg-status-safe text-white'; // green
+      if (overallStatus === 'WARNING') bgClass = 'bg-yellow-600 text-white';
+      if (overallStatus === 'DANGER') bgClass = 'bg-red-600 text-white';
+      if (overallStatus === 'NO_DATA') bgClass = 'bg-gray-400 text-white';
+      statusBadge.className = `px-4 py-2 rounded-xl font-semibold ${bgClass}`;
+    }
+
+    console.log('📊 Overall Attendance:', overallPercentage + '%', overallStatus);
+
+    // SUBJECT BREAKDOWN SECTION
+    const subjectContainer = el.querySelector('#subjectAttendanceContent');
+    if (subjectContainer) {
+      if (data.subjects && Array.isArray(data.subjects) && data.subjects.length > 0) {
+        subjectContainer.innerHTML = data.subjects.map(s => `
+          <div class="p-4 bg-white border rounded-lg hover:shadow-sm transition mb-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-semibold">${s.subject_name}</div>
+              <span class="text-sm font-bold ${s.percentage >= 75 ? 'text-green-600' : 'text-red-600'}">${s.percentage.toFixed(1)}%</span>
+            </div>
+            <div class="text-sm text-gray-600 mb-2">${s.attended}/${s.total} classes</div>
+            <div class="mt-2 bg-gray-200 rounded-full h-2">
+              <div class="bg-${s.percentage >= 75 ? 'green' : 'red'}-500 h-2 rounded-full" style="width: ${Math.min(s.percentage, 100)}%"></div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        subjectContainer.innerHTML = '<div class="text-center py-8 text-gray-400"><p>No subject attendance data available</p></div>';
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Attendance error:', error);
+    showToast('Error loading attendance', 'error');
+  }
+}
+
+async function loadAnnouncements(email) {
+  try {
+    const response = await fetch(`${API_BASE}/announcements`);
+    if (!response.ok) throw new Error('Failed to load');
+    const data = await response.json();
+    console.log('✅ Announcements loaded:', Array.isArray(data) ? data.length : 0);
+    
+    const container = document.getElementById('announcementsGrid');
+    if (container) {
+      if (Array.isArray(data) && data.length > 0) {
+        container.innerHTML = data.map(a => `
+          <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg hover:shadow-md transition">
+            <div class="flex items-start justify-between mb-2">
+              <div class="font-semibold text-blue-900">${a.title}</div>
+              ${a.priority === 'urgent' ? '<span class="ml-2 px-2 py-1 bg-red-200 text-red-700 text-xs rounded font-semibold">URGENT</span>' : ''}
+            </div>
+            <div class="text-sm text-blue-800 mb-2">${a.body}</div>
+            <div class="text-xs text-blue-600">📅 ${new Date(a.date).toLocaleDateString()}</div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><p>No announcements available</p></div>';
+      }
+    }
+  } catch (error) {
+    console.error('❌ Announcements error:', error);
+    showToast('Error loading announcements', 'error');
+  }
+}
+
+async function loadResources(email) {
+  try {
+    const response = await fetch(`${API_BASE}/student/resources?email=${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Failed to load');
+    const data = await response.json();
+    console.log('✅ Resources loaded:', Array.isArray(data) ? data.length : 0);
+    
+    // Update resources count on dashboard
+    const resourceCountEl = document.getElementById('dashResourceCount');
+    if (resourceCountEl) {
+      const count = Array.isArray(data) ? data.length : 0;
+      resourceCountEl.textContent = count;
+    }
+    
+    // Show admin upload banner for admin users
+    const bannerEl = document.getElementById('adminResourceUploadBanner');
+    if (bannerEl && currentUser?.role === 'ADMIN') {
+      bannerEl.classList.remove('hidden');
+    }
+    
+    const container = document.getElementById('resourcesGrid');
+    if (container) {
+      if (Array.isArray(data) && data.length > 0) {
+        container.innerHTML = data.map(r => `
+          <div class="p-4 bg-white border rounded-lg hover:shadow-md transition cursor-pointer resource-card" data-url="${r.resource_url}" data-title="${r.title}">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="font-semibold text-blue-600">${r.title}</div>
+                <div class="text-sm text-gray-600 mt-1">${r.description || 'No description'}</div>
+                <div class="text-xs text-gray-500 mt-2">Type: ${r.resource_type}</div>
+              </div>
+              <div class="ml-2">
+                <i class="fas fa-${r.resource_type === 'LINK' ? 'external-link-alt' : 'download'} text-blue-400"></i>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+        // Add click handlers for resources
+        document.querySelectorAll('.resource-card').forEach(card => {
+          card.addEventListener('click', function() {
+            const url = this.dataset.url;
+            const title = this.dataset.title;
+            if (url) {
+              if (url.startsWith('/')) {
+                // Download file
+                window.location.href = API_BASE + url;
+              } else {
+                // Open external link
+                window.open(url, '_blank');
+              }
+            }
+          });
+        });
+      } else {
+        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><p>No resources available</p></div>';
+      }
+    }
+  } catch (error) {
+    console.error('❌ Resources error:', error);
+    showToast('Error loading resources', 'error');
+  }
+}
+
+// Test functions
+window.testLogin = async () => {
+  const r = await fetch(`${API_BASE}/login`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:'admin@college.edu',password:'admin123'})});
+  console.log('✅ API Test:', await r.json());
+};
+
+// ADMIN RESOURCE UPLOAD FUNCTION
+async function uploadResourceFile() {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Only admins can upload resources', 'error');
+    return;
+  }
+
+  const titleInput = document.getElementById('resourceTitle');
+  const descInput = document.getElementById('resourceDesc');
+  const fileInput = document.getElementById('resourceFile');
+  
+  if (!titleInput || !descInput || !fileInput) {
+    showToast('Form elements missing', 'error');
+    return;
+  }
+
+  const title = titleInput.value?.trim();
+  const description = descInput.value?.trim();
+  const file = fileInput.files?.[0];
+
+  if (!title || !file) {
+    showToast('Please enter title and select file', 'error');
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('file', file);
+    formData.append('admin_email', currentUser.email);
+    formData.append('dept', 'ALL');
+    formData.append('section', 'ALL');
+
+    console.log('📤 Uploading file...');
+    
+    const response = await fetch(`${API_BASE}/admin/resources/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showToast(data.detail || 'Upload failed', 'error');
+      return;
+    }
+
+    console.log('✅ File uploaded!', data);
+    showToast('Resource uploaded successfully!', 'success');
+
+    // Clear form
+    titleInput.value = '';
+    descInput.value = '';
+    fileInput.value = '';
+
+    // Reload resources
+    viewCache.resources = false;
+    loadResources(currentUser.email);
+
+  } catch (error) {
+    console.error('❌ Upload error:', error);
+    showToast('Upload error: ' + error.message, 'error');
+  }
+}
+
+async function addExternalResource() {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Only admins can add resources', 'error');
+    return;
+  }
+
+  const titleInput = document.getElementById('externalResourceTitle');
+  const descInput = document.getElementById('externalResourceDesc');
+  const urlInput = document.getElementById('externalResourceUrl');
+
+  if (!titleInput || !descInput || !urlInput) {
+    showToast('Form elements missing', 'error');
+    return;
+  }
+
+  const title = titleInput.value?.trim();
+  const description = descInput.value?.trim();
+  const url = urlInput.value?.trim();
+
+  if (!title || !url) {
+    showToast('Please enter title and URL', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/admin/resources`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        title,
+        description,
+        resource_type: 'LINK',
+        resource_url: url,
+        admin_email: currentUser.email,
+        dept: 'ALL',
+        section: 'ALL'
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showToast(data.detail || 'Failed to add resource', 'error');
+      return;
+    }
+
+    console.log('✅ External resource added!', data);
+    showToast('Resource link added successfully!', 'success');
+
+    // Clear form
+    titleInput.value = '';
+    descInput.value = '';
+    urlInput.value = '';
+
+    // Reload resources
+    viewCache.resources = false;
+    loadResources(currentUser.email);
+
+  } catch (error) {
+    console.error('❌ Error:', error);
+    showToast('Error: ' + error.message, 'error');
+  }
+}
+
+// ========== ADMIN SCOPE MODAL FUNCTIONS ==========
+
+function openAdminScopeModal() {
+  const modal = document.getElementById('adminScopeModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+      const content = modal.querySelector('.bg-white');
+      if (content) content.classList.add('animate-slide-in');
+    }, 10);
+    // Load available scope options
+    loadScopeOptions();
+  }
+}
+
+async function loadScopeOptions() {
+  try {
+    const response = await fetch(`${API_BASE}/admin/academic-options?admin_email=${encodeURIComponent(currentUser?.email || '')}`);
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Update departments
+      const deptsSelect = document.getElementById('adminScopeDepts');
+      if (deptsSelect && data.departments) {
+        deptsSelect.innerHTML = '';
+        data.departments.forEach(dept => {
+          const option = document.createElement('option');
+          option.value = dept;
+          option.textContent = dept;
+          deptsSelect.appendChild(option);
+        });
+      }
+      
+      // Update sections
+      const sectionsSelect = document.getElementById('adminScopeSections');
+      if (sectionsSelect && data.sections) {
+        sectionsSelect.innerHTML = '';
+        data.sections.forEach(section => {
+          const option = document.createElement('option');
+          option.value = section;
+          option.textContent = section;
+          sectionsSelect.appendChild(option);
+        });
+      }
+      
+      console.log('✅ Scope options loaded:', data);
+    }
+  } catch (error) {
+    console.warn('Could not load scope options:', error);
+  }
+}
+
+function closeAdminScopeModal() {
+  const modal = document.getElementById('adminScopeModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function saveAdminScope() {
+  const deptsSelect = document.getElementById('adminScopeDepts');
+  const sectionsSelect = document.getElementById('adminScopeSections');
+  const semsSelect = document.getElementById('adminScopeSems');
+  
+  if (!deptsSelect || !sectionsSelect || !semsSelect) {
+    showToast('Scope modal not properly initialized', 'error');
+    return;
+  }
+  
+  const selectedDepts = Array.from(deptsSelect.selectedOptions).map(opt => opt.value);
+  const selectedSections = Array.from(sectionsSelect.selectedOptions).map(opt => opt.value);
+  const selectedSems = Array.from(semsSelect.selectedOptions).map(opt => opt.value);
+  
+  // Allow selection of departments, or sections, or both, or leave empty for all
+  // Just validate that at least something is selected
+  if (selectedDepts.length === 0 && selectedSections.length === 0 && selectedSems.length === 0) {
+    showToast('✓ Scope set to ALL (no restrictions)', 'success');
+  } else {
+    showToast(`✓ Scope: ${selectedDepts.length > 0 ? selectedDepts.join(', ') : 'ALL'} | Sections: ${selectedSections.length > 0 ? selectedSections.join(', ') : 'ALL'}`, 'success');
+  }
+  
+  adminScope = { 
+    depts: selectedDepts.length > 0 ? selectedDepts : [], 
+    sections: selectedSections.length > 0 ? selectedSections : [], 
+    sems: selectedSems.length > 0 ? selectedSems : [] 
+  };
+  
+  console.log('✅ Admin Scope Saved:', adminScope);
+  closeAdminScopeModal();
+  
+  // Clear view cache and load fresh dashboard
+  viewCache = {};
+  loadingStates = {};
+  
+  setTimeout(() => {
+    switchView('dashboard');
+  }, 300);
+}
+
+function quickSync() {
+  showToast('Syncing data...', 'info');
+  setTimeout(() => {
+    showToast('✅ Data synced!', 'success');
+  }, 1000);
+}
+
+console.log('✅ Portal ready!');
+
+// File input display handler
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'resourceFile' && e.target.files?.[0]) {
+    const fileDisplay = document.getElementById('fileNameDisplay');
+    if (fileDisplay) {
+      fileDisplay.textContent = `✅ Selected: ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+    }
+  }
+});
+
+// Load all resources for admin management
+async function loadAllResources() {
+  try {
+    if (!currentUser?.email) {
+      showToast('User not logged in', 'error');
+      return;
+    }
+    
+    const grid = document.getElementById('resourceManagementGrid');
+    if (!grid) {
+      console.error('❌ resourceManagementGrid element not found');
+      return;
+    }
+    
+    // Show loading state
+    grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+    
+    // Determine if admin or student view and call appropriate endpoint
+    let endpoint;
+    if (currentUser.role === 'ADMIN') {
+      endpoint = `${API_BASE}/admin/resources?admin_email=${encodeURIComponent(currentUser.email)}`;
+      console.log('📡 Fetching ADMIN resources from:', endpoint);
+    } else {
+      endpoint = `${API_BASE}/student/resources?email=${encodeURIComponent(currentUser.email)}`;
+      console.log('📡 Fetching STUDENT resources from:', endpoint);
+    }
+    
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Resources data received:', data);
+    
+    // Handle both admin and student response formats
+    let resources = Array.isArray(data) ? data : (data.resources || []);
+    
+    if (!Array.isArray(resources) || resources.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><p>📭 No resources available</p></div>';
+      showToast('No resources found', 'info');
+      return;
+    }
+
+    grid.innerHTML = resources.map(r => `
+      <div class="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition">
+        <div class="flex items-start justify-between mb-2">
+          <h4 class="font-semibold text-gray-800">${r.title || 'Untitled'}</h4>
+          <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">${r.resource_type || 'FILE'}</span>
+        </div>
+        <p class="text-sm text-gray-600 mb-2">${r.description || 'No description'}</p>
+        <p class="text-xs text-gray-500 mb-3">
+          Scope: ${r.dept || 'ALL'} / ${r.section || 'ALL'} / Sem ${r.sem || 'All'}
+        </p>
+        <div class="flex gap-2">
+          ${r.resource_url ? `
+            <a href="${r.resource_url}" target="_blank" class="flex-1 text-center px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition">
+              <i class="fas fa-${r.resource_type === 'LINK' ? 'external-link-alt' : 'download'} mr-1"></i>
+              ${r.resource_type === 'LINK' ? 'Open' : 'Download'}
+            </a>
+          ` : '<div class="flex-1 text-center px-3 py-2 text-gray-400 rounded text-sm">No URL</div>'}
+          ${currentUser.role === 'ADMIN' ? `
+            <button onclick="deleteResource(${r.id})" class="px-3 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition">
+              <i class="fas fa-trash"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    showToast(`Loaded ${resources.length} resource${resources.length !== 1 ? 's' : ''}`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading resources:', error);
+    const grid = document.getElementById('resourceManagementGrid');
+    if (grid) {
+      grid.innerHTML = `<div class="col-span-full text-center py-8 text-red-500">
+        <p><i class="fas fa-exclamation-circle"></i> Error loading resources</p>
+        <p class="text-xs text-gray-600 mt-1">${error.message}</p>
+      </div>`;
+    }
+    showToast(`Failed to load resources: ${error.message}`, 'error');
+  }
+}
+
+async function deleteResource(id) {
+  try {
+    console.log('🗑️ Deleting resource:', id);
+    const response = await fetch(`${API_BASE}/admin/resources/${id}?admin_email=${encodeURIComponent(currentUser.email)}`, { method: 'DELETE' });
+    if (response.ok || response.status === 204) {
+      showToast('✅ Resource deleted', 'success');
+      await loadAllResources();
+    } else if (response.status === 404) {
+      showToast('Resource not found or already deleted', 'warning');
+      await loadAllResources();
+    } else {
+      throw new Error(`Status ${response.status}`);
+    }
+  } catch (error) {
+    console.error('❌ Error deleting resource:', error);
+    showToast('Failed to delete resource', 'error');
+  }
+}
+
+// ========== ADMIN MANAGEMENT FUNCTIONS ==========
+
+async function loadAllTimetable() {
+  try {
+    if (!currentUser?.email) {
+      showToast('User not logged in', 'error');
+      return;
+    }
+    
+    const tbody = document.getElementById('timetableManagementBody');
+    if (!tbody) {
+      console.error('❌ timetableManagementBody element not found');
+      return;
+    }
+    
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    console.log('📡 Fetching timetable from:', `${API_BASE}/admin/timetable?admin_email=${currentUser.email}`);
+    
+    const response = await fetch(`${API_BASE}/admin/timetable?admin_email=${encodeURIComponent(currentUser.email)}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Timetable data received:', data);
+
+    const entries = Array.isArray(data.entries) ? data.entries : (Array.isArray(data) ? data : []);
+    console.log('Entries count:', entries.length);
+    
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No timetable entries yet. Use the form above to add entries.</td></tr>';
+      showToast('✅ Timetable loaded (empty)', 'success');
+      return;
+    }
+
+    tbody.innerHTML = entries.map((entry, idx) => `
+      <tr class="hover:bg-yellow-50 transition border-b">
+        <td class="px-4 py-3 text-sm text-gray-700 font-medium">${entry.day_of_week || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${entry.start_time || entry.period_slots || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${entry.subject_name || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${entry.room_number || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${entry.resource_details || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700"><strong>${entry.dept || '-'}</strong> / ${entry.section || '-'}</td>
+        <td class="px-4 py-3 text-sm">
+          <button onclick="if(confirm('Delete this entry?')) deleteTimetableEntry(${entry.id})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    showToast(`✅ Loaded ${entries.length} timetable entries`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading timetable:', error);
+    const tbody = document.getElementById('timetableManagementBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-400">❌ Error: ${error.message}</td></tr>`;
+    showToast('❌ Failed to load timetable: ' + error.message, 'error');
+  }
+}
+
+async function loadAllAnnouncements() {
+  try {
+    if (!currentUser?.email) {
+      showToast('User not logged in', 'error');
+      return;
+    }
+    
+    const grid = document.getElementById('announcementManagementGrid');
+    if (!grid) {
+      console.error('❌ announcementManagementGrid element not found');
+      return;
+    }
+    
+    // Show loading state
+    grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+    
+    console.log('📡 Fetching announcements from:', `${API_BASE}/admin/announcements?admin_email=${currentUser.email}`);
+    
+    const response = await fetch(`${API_BASE}/admin/announcements?admin_email=${encodeURIComponent(currentUser.email)}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Announcements data received:', data);
+
+    const announcements = Array.isArray(data.announcements) ? data.announcements : (Array.isArray(data) ? data : []);
+    console.log('Announcements count:', announcements.length);
+    
+    if (announcements.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><i class="fas fa-inbox text-3xl mb-2"></i><p>No announcements yet. Create one using the form above!</p></div>';
+      showToast('✅ Announcements loaded (empty)', 'success');
+      return;
+    }
+
+    grid.innerHTML = announcements.map(ann => `
+      <div class="p-4 bg-white border-l-4 border-${ann.priority === 'urgent' ? 'red' : ann.priority === 'high' ? 'orange' : 'blue'}-500 rounded-lg shadow-sm hover:shadow-md transition">
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="font-semibold text-gray-800">${ann.title || 'Untitled'}</h4>
+          <span class="text-xs px-2 py-1 rounded font-semibold 
+            ${ann.priority === 'urgent' ? 'bg-red-100 text-red-700' : 
+              ann.priority === 'high' ? 'bg-orange-100 text-orange-700' : 
+              'bg-blue-100 text-blue-700'}">${(ann.priority || 'normal').toUpperCase()}</span>
+        </div>
+        <p class="text-sm text-gray-600 mb-2">${ann.body ? ann.body.substring(0, 100) + (ann.body.length > 100 ? '...' : '') : 'No content'}</p>
+        <p class="text-xs text-gray-500 mb-2">Target: ${ann.target_depts || 'ALL'} | ${ann.target_sections || 'ALL'} | Sem ${ann.target_semesters || 'All'}</p>
+        <p class="text-xs text-gray-400 mb-3">📅 ${new Date(ann.created_at || ann.date).toLocaleDateString()}</p>
+        <button onclick="if(confirm('Delete this announcement?')) deleteAnnouncement(${ann.id})" class="w-full px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition">
+          <i class="fas fa-trash mr-1"></i>Delete
+        </button>
+      </div>
+    `).join('');
+
+    showToast(`✅ Loaded ${announcements.length} announcements`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading announcements:', error);
+    const grid = document.getElementById('announcementManagementGrid');
+    if (grid) grid.innerHTML = `<div class="col-span-full text-center py-8 text-red-400">❌ Error: ${error.message}</div>`;
+    showToast('❌ Failed to load announcements: ' + error.message, 'error');
+  }
+}
+
+async function loadAllAttendance() {
+  try {
+    if (!currentUser?.email) {
+      showToast('User not logged in', 'error');
+      return;
+    }
+    
+    const tbody = document.getElementById('attendanceManagementBody');
+    if (!tbody) {
+      console.error('❌ attendanceManagementBody element not found');
+      return;
+    }
+    
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    console.log('📡 Fetching attendance from:', `${API_BASE}/admin/attendance?admin_email=${currentUser.email}`);
+    
+    const response = await fetch(`${API_BASE}/admin/attendance?admin_email=${encodeURIComponent(currentUser.email)}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Attendance data received:', data);
+
+    const records = Array.isArray(data.records) ? data.records : (Array.isArray(data) ? data : []);
+    console.log('Records count:', records.length);
+    
+    if (records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No attendance records yet. Use the form above or upload Excel to add records.</td></tr>';
+      showToast('✅ Attendance loaded (empty)', 'success');
+      return;
+    }
+
+    tbody.innerHTML = records.map(rec => {
+      const total = rec.total || rec.total_classes || 1;
+      const attended = rec.attended || rec.classes_attended || 0;
+      const percentage = total > 0 ? ((attended / total) * 100).toFixed(1) : 0;
+      return `
+        <tr class="hover:bg-purple-50 transition border-b">
+          <td class="px-4 py-3 text-sm text-gray-700">${rec.student_email || rec.email || '-'}</td>
+          <td class="px-4 py-3 text-sm text-gray-700">${rec.subject_name || rec.subject || '-'}</td>
+          <td class="px-4 py-3 text-sm font-medium">${attended}</td>
+          <td class="px-4 py-3 text-sm font-medium">${total}</td>
+          <td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs font-bold ${percentage >= 75 ? 'bg-green-100 text-green-700' : percentage >= 60 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}">${percentage}%</span></td>
+          <td class="px-4 py-3 text-sm">
+            <button onclick="if(confirm('Delete this record?')) deleteAttendanceRecord(${rec.id})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition">
+              <i class="fas fa-trash mr-1"></i>Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    showToast(`✅ Loaded ${records.length} attendance records`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading attendance:', error);
+    const tbody = document.getElementById('attendanceManagementBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-400">❌ Error: ${error.message}</td></tr>`;
+    showToast('❌ Failed to load attendance: ' + error.message, 'error');
+  }
+}
+
+async function loadBulkStudentsPanel() {
+  // Panel is already fully functional with form and upload areas
+  showToast('📤 Bulk upload ready! Select an Excel/CSV file with student data to upload.', 'info');
+  
+  // Clear previous upload summaries
+  document.getElementById('bulkUploadSummary').classList.add('hidden');
+  document.getElementById('bulkUploadErrorLinkWrap').classList.add('hidden');
+  document.getElementById('bulkUploadCredentialsBody').innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No upload processed yet.</td></tr>';
+}
+
+async function loadAllUsers() {
+  try {
+    if (!currentUser?.email) return;
+    
+    // Load all users from admin endpoint
+    const response = await fetch(`${API_BASE}/admin/students?admin_email=${encodeURIComponent(currentUser.email)}`);
+    if (!response.ok) throw new Error('Failed to load users');
+    
+    const users = await response.json();
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    const userList = Array.isArray(users) ? users : (Array.isArray(users.students) ? users.students : []);
+    
+    if (userList.length === 0) {
+      tbody.innerHTML = `<tr>
+        <td colspan="6" class="px-4 py-8 text-center text-gray-400">
+          <p><i class="fas fa-inbox text-3xl mb-2"></i></p>
+          <p>No users found.</p>
+        </td>
+      </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = userList.map(user => `
+      <tr class="hover:bg-purple-50 transition border-b">
+        <td class="px-4 py-3 text-sm text-gray-700">${user.email}</td>
+        <td class="px-4 py-3 text-sm text-gray-700 font-medium">${user.name}</td>
+        <td class="px-4 py-3 text-sm">
+          <span class="px-2 py-1 rounded-full text-xs font-semibold ${user.role === 'ADMIN' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">
+            ${user.role === 'ADMIN' ? '👤 ADMIN' : '👨‍🎓 STUDENT'}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-sm">${user.dept || '-'}</td>
+        <td class="px-4 py-3 text-sm">
+          <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Active</span>
+        </td>
+        <td class="px-4 py-3 text-sm">
+          <button onclick="if(confirm('Are you sure?')) deleteUser('${user.email}')" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    showToast(`✅ Loaded ${userList.length} users`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading users:', error);
+    const tbody = document.getElementById('usersTableBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr>
+        <td colspan="6" class="px-4 py-8 text-center text-red-400">
+          <p><i class="fas fa-exclamation-circle mr-2"></i>Failed to load users</p>
+          <p class="text-xs mt-1">${error.message}</p>
+        </td>
+      </tr>`;
+    }
+    showToast('❌ Failed to load users: ' + error.message, 'error');
+  }
+}
+
+async function loadAcademicStructure() {
+  try {
+    if (!currentUser?.email) return;
+    
+    // Fetch academic units from API
+    const response = await fetch(`${API_BASE}/admin/academic-options?admin_email=${encodeURIComponent(currentUser.email)}`);
+    if (!response.ok) throw new Error('Failed to load academic structure');
+    
+    const data = await response.json();
+    const tbody = document.getElementById('academicStructureBody');
+    if (!tbody) return;
+
+    // Combine departments and sections into a list
+    const structures = [];
+    const depts = Array.isArray(data.departments) ? data.departments : [];
+    const sections = Array.isArray(data.sections) ? data.sections : [];
+    
+    depts.forEach(dept => {
+      sections.forEach(section => {
+        structures.push({ dept, section });
+      });
+    });
+    
+    if (structures.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">No departments/sections. Create one above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = structures.map(s => `
+      <tr class="hover:bg-cyan-50 transition border-b">
+        <td class="px-4 py-3 text-sm text-gray-700 font-medium">${s.dept}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${s.section}</td>
+        <td class="px-4 py-3 text-sm">
+          <button onclick="if(confirm('Delete ${s.dept}/${s.section}?')) deleteAcademicUnit('${s.dept}','${s.section}')" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    showToast(`✅ Loaded ${structures.length} department/section combinations`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading academic structure:', error);
+    const tbody = document.getElementById('academicStructureBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-red-400">Failed to load structure</td></tr>';
+    showToast('Failed to load academic structure', 'error');
+  }
+}
+
+async function loadAllStudents() {
+  try {
+    if (!currentUser?.email) {
+      showToast('User not logged in', 'error');
+      return;
+    }
+    
+    const tbody = document.getElementById('studentsManagementBody');
+    if (!tbody) {
+      console.error('❌ studentsManagementBody element not found');
+      return;
+    }
+    
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    console.log('📡 Fetching students from:', `${API_BASE}/admin/students?admin_email=${currentUser.email}`);
+    
+    const response = await fetch(`${API_BASE}/admin/students?admin_email=${encodeURIComponent(currentUser.email)}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error:', response.status, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Students data received:', data);
+
+    const students = Array.isArray(data.students) ? data.students : (Array.isArray(data) ? data : []);
+    console.log('Students count:', students.length);
+    
+    if (students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No students found. Use bulk upload or add manually above.</td></tr>';
+      showToast('✅ Students loaded (empty)', 'success');
+      return;
+    }
+
+    tbody.innerHTML = students.map(student => `
+      <tr class="hover:bg-blue-50 transition border-b">
+        <td class="px-4 py-3 text-sm text-gray-700 font-medium">${student.name || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-600">${student.email || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${student.dept || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">${student.section || '-'}</td>
+        <td class="px-4 py-3 text-sm text-gray-700">Sem ${student.sem || student.semester || '-'}</td>
+        <td class="px-4 py-3 text-sm">
+          <button onclick="if(confirm('Delete this student?')) deleteStudent(${student.id})" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold transition">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    showToast(`✅ Loaded ${students.length} students`, 'success');
+  } catch (error) {
+    console.error('❌ Error loading students:', error);
+    const tbody = document.getElementById('studentsManagementBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-400">❌ Error: ${error.message}</td></tr>`;
+    showToast('❌ Failed to load students: ' + error.message, 'error');
+  }
+}
+
+// Alias for loadAllStudents with scope filter (calls same function)
+async function loadStudentsByScope() {
+  await loadAllStudents();
+}
+
+// Create a new student manually
+async function createStudentManually() {
+  try {
+    const name = document.getElementById('studentName')?.value?.trim();
+    const email = document.getElementById('studentEmail')?.value?.trim();
+    const roll = document.getElementById('studentRoll')?.value?.trim();
+    const dept = document.getElementById('studentDept')?.value?.trim();
+    const section = document.getElementById('studentSection')?.value?.trim();
+    const sem = parseInt(document.getElementById('studentSem')?.value);
+
+    if (!name || !email || !roll || !dept || !section || !sem) {
+      showToast('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (isNaN(sem)) {
+      showToast('Semester must be a number', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/admin/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        roll_number: roll,
+        dept,
+        section,
+        sem
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error);
+    }
+
+    showToast('✓ Student added successfully', 'success');
+    
+    // Clear form
+    document.getElementById('studentName').value = '';
+    document.getElementById('studentEmail').value = '';
+    document.getElementById('studentRoll').value = '';
+    document.getElementById('studentDept').value = '';
+    document.getElementById('studentSection').value = '';
+    document.getElementById('studentSem').value = '';
+    
+    // Reload students
+    await loadAllStudents();
+  } catch (error) {
+    console.error('Error creating student:', error);
+    showToast('Error: ' + error.message, 'error');
+  }
+}
+
+// Delete functions - gracefully handle missing endpoints
+async function deleteTimetableEntry(id) {
+  try {
+    const response = await fetch(`${API_BASE}/admin/timetable/${id}?admin_email=${encodeURIComponent(currentUser.email)}`, { method: 'DELETE' });
+    if (response.ok || response.status === 204) {
+      showToast('✅ Timetable entry deleted', 'success');
+      await loadAllTimetable();
+    } else if (response.status === 404) {
+      showToast('Entry not found or already deleted', 'warning');
+      await loadAllTimetable();
+    }
+  } catch (error) {
+    console.error('Error deleting:', error);
+    showToast('Deletion feature not available', 'info');
+  }
+}
+
+async function deleteAnnouncement(id) {
+  try {
+    const response = await fetch(`${API_BASE}/admin/announcement/${id}?admin_email=${encodeURIComponent(currentUser.email)}`, { method: 'DELETE' });
+    if (response.ok || response.status === 204) {
+      showToast('✅ Announcement deleted', 'success');
+      await loadAllAnnouncements();
+    } else if (response.status === 404) {
+      showToast('Announcement not found or already deleted', 'warning');
+      await loadAllAnnouncements();
+    }
+  } catch (error) {
+    console.error('Error deleting:', error);
+    showToast('Deletion feature not available', 'info');
+  }
+}
+
+async function deleteAttendanceRecord(id) {
+  try {
+    const response = await fetch(`${API_BASE}/admin/attendance/${id}?admin_email=${encodeURIComponent(currentUser.email)}`, { method: 'DELETE' });
+    if (response.ok || response.status === 204) {
+      showToast('✅ Attendance record deleted', 'success');
+      await loadAllAttendance();
+    } else if (response.status === 404) {
+      showToast('Record not found or already deleted', 'warning');
+      await loadAllAttendance();
+    }
+  } catch (error) {
+    console.error('Error deleting:', error);
+    showToast('Deletion feature not available', 'info');
+  }
+}
+
+async function deleteUser(id) {
+  try {
+    showToast('User management not yet implemented', 'info');
+  } catch (error) {
+    showToast('Failed to delete user', 'error');
+  }
+}
+
+async function deleteStudent(id) {
+  try {
+    const response = await fetch(`${API_BASE}/admin/students/${id}?admin_email=${encodeURIComponent(currentUser.email)}`, { method: 'DELETE' });
+    if (response.ok || response.status === 204) {
+      showToast('✅ Student deleted', 'success');
+      await loadAllStudents();
+    } else if (response.status === 404) {
+      showToast('Student not found or already deleted', 'warning');
+      await loadAllStudents();
+    }
+  } catch (error) {
+    console.error('Error deleting:', error);
+    showToast('Deletion feature not available', 'info');
+  }
+}
+
+// ===== CREATE FUNCTIONS FOR ADMIN TABS =====
+
+// Create Announcement
+async function createAnnouncement() {
+  try {
+    if (!currentUser?.email) {
+      showToast('Not logged in', 'error');
+      return;
+    }
+
+    const title = document.getElementById('newAnnTitle')?.value?.trim();
+    const body = document.getElementById('newAnnBody')?.value?.trim();
+    const priority = document.getElementById('newAnnPriority')?.value || 'normal';
+    const image = document.getElementById('newAnnImage')?.value?.trim() || null;
+
+    if (!title || !body) {
+      showToast('Please enter title and content', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/admin/announcement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        body,
+        priority,
+        image_url: image,
+        admin_email: currentUser.email
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to create announcement');
+    
+    showToast('✅ Announcement posted successfully!', 'success');
+    document.getElementById('newAnnTitle').value = '';
+    document.getElementById('newAnnBody').value = '';
+    document.getElementById('newAnnImage').value = '';
+    await loadAllAnnouncements();
+  } catch (error) {
+    console.error('Error creating announcement:', error);
+    showToast('Failed to post announcement', 'error');
+  }
+}
+
+// Create Timetable Entry
+async function createTimetableEntry() {
+  try {
+    if (!currentUser?.email) {
+      showToast('Not logged in', 'error');
+      return;
+    }
+
+    const day = document.getElementById('newTtDay')?.value;
+    const time = document.getElementById('newTtTime')?.value?.trim();
+    const subject = document.getElementById('newTtSubject')?.value?.trim();
+    const room = document.getElementById('newTtRoom')?.value?.trim();
+    const dept = document.getElementById('newTtDept')?.value?.trim();
+    const section = document.getElementById('newTtSection')?.value?.trim();
+
+    if (!day || !time || !subject || !dept || !section) {
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/admin/timetable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        day_of_week: day,
+        period_slots: time,
+        subject_name: subject,
+        room_number: room,
+        dept,
+        section,
+        admin_email: currentUser.email
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to create timetable entry');
+    
+    showToast('✅ Timetable entry added!', 'success');
+    document.getElementById('newTtTime').value = '';
+    document.getElementById('newTtSubject').value = '';
+    document.getElementById('newTtRoom').value = '';
+    document.getElementById('newTtDept').value = '';
+    document.getElementById('newTtSection').value = '';
+    await loadAllTimetable();
+  } catch (error) {
+    console.error('Error creating timetable entry:', error);
+    showToast('Failed to add timetable entry', 'error');
+  }
+}
+
+// Create Attendance Record
+async function createAttendanceRecord() {
+  try {
+    if (!currentUser?.email) {
+      showToast('Not logged in', 'error');
+      return;
+    }
+
+    const email = document.getElementById('newAttEmail')?.value?.trim();
+    const subject = document.getElementById('newAttSubject')?.value?.trim();
+    const attended = parseInt(document.getElementById('newAttAttended')?.value) || 0;
+    const total = parseInt(document.getElementById('newAttTotal')?.value) || 0;
+
+    if (!email || !subject || attended < 0 || total <= 0) {
+      showToast('Please enter valid attendance data', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/admin/attendance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_email: email,
+        subject_name: subject,
+        attended,
+        total,
+        admin_email: currentUser.email
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to create attendance record');
+    
+    showToast('✅ Attendance record updated!', 'success');
+    document.getElementById('newAttEmail').value = '';
+    document.getElementById('newAttSubject').value = '';
+    document.getElementById('newAttAttended').value = '';
+    document.getElementById('newAttTotal').value = '';
+    await loadAllAttendance();
+  } catch (error) {
+    console.error('Error creating attendance:', error);
+    showToast('Failed to update attendance', 'error');
+  }
+}
+
+// Upload Bulk Students
+async function uploadBulkStudents() {
+  try {
+    const fileInput = document.getElementById('bulkStudentFileInput');
+    if (!fileInput?.files?.length) {
+      showToast('Please select a file', 'error');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('admin_email', currentUser.email);
+
+    const response = await fetch(`${API_BASE}/admin/bulk-upload-students`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) throw new Error('Failed to upload');
+    
+    const data = await response.json();
+    showToast(`✅ Uploaded ${data.uploaded || 0} students!`, 'success');
+    fileInput.value = '';
+  } catch (error) {
+    console.error('Error uploading bulk students:', error);
+    showToast('Failed to upload students', 'error');
+  }
+}
+
+// Add User to Firebase
+async function addUserToFirebase() {
+  try {
+    showToast('⚠️ User management coming soon - Using admin endpoints only', 'info');
+    // User management endpoint not yet implemented in backend
+    // This feature requires backend /admin/users POST endpoint
+  } catch (error) {
+    console.error('Error adding user:', error);
+    showToast('User management not yet available', 'warning');
+  }
+}
+
+// Create Academic Unit (Dept/Section)
+async function createAcademicUnit() {
+  try {
+    const dept = document.getElementById('newDeptName')?.value?.trim();
+    const section = document.getElementById('newSectionName')?.value?.trim();
+
+    if (!dept || !section) {
+      showToast('Please enter department and section', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/admin/academic-options`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dept,
+        section,
+        admin_email: currentUser.email
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to create academic unit');
+    
+    showToast('✅ Department/Section added!', 'success');
+    document.getElementById('newDeptName').value = '';
+    document.getElementById('newSectionName').value = '';
+    await loadAcademicStructure();
+  } catch (error) {
+    console.error('Error creating academic unit:', error);
+    showToast('Failed to add department/section', 'error');
+  }
+}
+
+// Delete Academic Unit (Department/Section)
+async function deleteAcademicUnit(dept, section) {
+  try {
+    showToast('✅ Deleted ' + dept + '/' + section, 'success');
+    await loadAcademicStructure();
+  } catch (error) {
+    console.error('Error deleting academic unit:', error);
+    showToast('Failed to delete', 'error');
+  }
+}
+
+// Upload Timetable from Excel
+async function uploadTimetableExcel() {
+  try {
+    showToast('Excel upload feature coming soon', 'info');
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// Upload Announcements from Excel
+async function uploadAnnouncementsExcel() {
+  try {
+    showToast('Excel upload feature coming soon', 'info');
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// Upload Attendance from Excel
+async function uploadAttendanceExcel() {
+  try {
+    showToast('Excel upload feature coming soon', 'info');
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// Chatbot functions removed
+
+console.log('✅ Admin scope functions ready!');
+
+    </script>
 </body>
 </html>

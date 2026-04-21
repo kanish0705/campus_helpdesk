@@ -91,6 +91,48 @@ DEMO_USERS = [
     },
 ]
 
+SAMPLE_SUBJECTS_BY_SCOPE = {
+    ("CSE", 4): [
+        "Data Structures",
+        "DBMS",
+        "Operating Systems",
+        "Computer Networks",
+        "Software Engineering",
+    ],
+    ("ECE", 6): [
+        "VLSI Design",
+        "Digital Signal Processing",
+        "Embedded Systems",
+        "Microcontrollers",
+        "Communication Systems",
+    ],
+    ("ME", 2): [
+        "Engineering Mechanics",
+        "Thermodynamics",
+        "Material Science",
+        "Workshop Practice",
+        "Engineering Drawing",
+    ],
+}
+
+DEFAULT_SAMPLE_SUBJECTS = [
+    "Mathematics",
+    "Programming Fundamentals",
+    "Physics",
+    "Communication Skills",
+    "Environmental Studies",
+]
+
+SAMPLE_TIME_SLOTS = [
+    "09:00-10:00",
+    "10:00-11:00",
+    "11:15-12:15",
+    "13:00-14:00",
+    "14:00-15:00",
+]
+
+SAMPLE_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
 # Load College Data from JSON
 def load_college_data():
     try:
@@ -192,6 +234,16 @@ class Resource(Base):
     section = Column(String(10), default="ALL")
     sem = Column(Integer, default=0)  # 0 means all semesters
     uploaded_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AcademicUnit(Base):
+    """Dynamic department/section combinations managed by admin."""
+    __tablename__ = "academic_units"
+    id = Column(Integer, primary_key=True, index=True)
+    dept = Column(String(50), index=True)
+    section = Column(String(10), index=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def migrate_schema_if_needed():
@@ -366,6 +418,21 @@ class ResourceResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class AcademicUnitCreate(BaseModel):
+    dept: str
+    section: str
+
+
+class StudentCreateRequest(BaseModel):
+    name: str
+    email: str
+    roll_number: str
+    dept: str
+    section: str = "A"
+    sem: int = 1
+    password: Optional[str] = None
+
 # ============== ATTENDANCE CALCULATION ENGINE ==============
 
 def calculate_attendance_percentage(attended: int, total: int) -> float:
@@ -489,6 +556,149 @@ def ensure_demo_users_if_empty(db: Session):
     db.commit()
 
 
+def get_sample_subjects_for_scope(dept: str, sem: int) -> List[str]:
+    return SAMPLE_SUBJECTS_BY_SCOPE.get((dept, sem), DEFAULT_SAMPLE_SUBJECTS)
+
+
+def ensure_sample_timetable_for_scope(db: Session, dept: str, section: str, sem: int):
+    has_rows = db.query(Timetable).filter(
+        Timetable.dept == dept,
+        Timetable.section == section,
+        Timetable.sem == sem,
+    ).first()
+    if has_rows:
+        return
+
+    subjects = get_sample_subjects_for_scope(dept, sem)
+    rows = []
+    for day_index, day_name in enumerate(SAMPLE_DAYS):
+        for slot_index, slot in enumerate(SAMPLE_TIME_SLOTS):
+            subject = subjects[(day_index + slot_index) % len(subjects)]
+            rows.append(
+                Timetable(
+                    day_of_week=day_name,
+                    period_slots=slot,
+                    subject_name=subject,
+                    room_number=f"{dept}-{section}-R{slot_index + 1}",
+                    faculty_name=f"Prof. {subject.split()[0]}",
+                    resource_details=f"Bring notes for {subject}",
+                    dept=dept,
+                    section=section,
+                    sem=sem,
+                )
+            )
+
+    db.add_all(rows)
+    db.commit()
+
+
+def ensure_sample_attendance_for_student(db: Session, user: User):
+    has_summary = db.query(AttendanceSummary).filter(
+        AttendanceSummary.student_email == user.email
+    ).first()
+    if has_summary:
+        return
+
+    subjects = get_sample_subjects_for_scope(user.dept, user.sem)
+    summaries = []
+    details = []
+
+    for index, subject in enumerate(subjects):
+        total = 28 + (index * 2)
+        attended = total - (index + 2)
+
+        summaries.append(
+            AttendanceSummary(
+                student_email=user.email,
+                subject_name=subject,
+                attended=attended,
+                total=total,
+                threshold_target=75.0,
+                dept=user.dept,
+                section=user.section,
+                sem=user.sem,
+                last_updated=datetime.utcnow(),
+            )
+        )
+
+        for offset in range(10):
+            class_date = date.today() - timedelta(days=offset)
+            status = "PRESENT" if (offset + index) % 5 != 0 else "ABSENT"
+            details.append(
+                Attendance(
+                    student_email=user.email,
+                    subject_name=subject,
+                    date=class_date,
+                    status=status,
+                    dept=user.dept,
+                    section=user.section,
+                    sem=user.sem,
+                )
+            )
+
+    db.add_all(summaries + details)
+    db.commit()
+
+
+def ensure_sample_resources_for_scope(db: Session, dept: str, section: str, sem: int):
+    has_scope_resource = db.query(Resource).filter(
+        Resource.dept.in_(["ALL", dept]),
+        Resource.section.in_(["ALL", section]),
+        Resource.sem.in_([0, sem]),
+    ).first()
+    if has_scope_resource:
+        return
+
+    subjects = get_sample_subjects_for_scope(dept, sem)
+    resources = [
+        Resource(
+            title=f"{subjects[0]} Quick Revision Notes",
+            description="Concise notes covering key concepts for exam preparation.",
+            resource_type="DOCUMENT",
+            resource_url="https://example.com/resources/revision-notes.pdf",
+            dept=dept,
+            section=section,
+            sem=sem,
+            uploaded_by="admin@college.edu",
+            created_at=datetime.utcnow(),
+        ),
+        Resource(
+            title=f"{subjects[1]} Practice Questions",
+            description="Practice set with mixed difficulty and answer key.",
+            resource_type="DOCUMENT",
+            resource_url="https://example.com/resources/practice-questions.pdf",
+            dept=dept,
+            section=section,
+            sem=sem,
+            uploaded_by="admin@college.edu",
+            created_at=datetime.utcnow(),
+        ),
+        Resource(
+            title="Campus Learning Portal",
+            description="Common resource portal shared across all departments.",
+            resource_type="LINK",
+            resource_url="https://example.com/portal",
+            dept="ALL",
+            section="ALL",
+            sem=0,
+            uploaded_by="admin@college.edu",
+            created_at=datetime.utcnow(),
+        ),
+    ]
+
+    db.add_all(resources)
+    db.commit()
+
+
+def ensure_sample_student_data(db: Session, user: User):
+    if user.role != "STUDENT":
+        return
+
+    ensure_sample_timetable_for_scope(db, user.dept, user.section, user.sem)
+    ensure_sample_attendance_for_student(db, user)
+    ensure_sample_resources_for_scope(db, user.dept, user.section, user.sem)
+
+
 def announcement_visible_for_user(announcement: Announcement, user: User) -> bool:
     depts = csv_to_list(announcement.target_depts)
     sections = csv_to_list(announcement.target_sections)
@@ -581,6 +791,96 @@ def generate_default_password(length: int = 10) -> str:
 
 def is_valid_email(email: str) -> bool:
     return bool(re.match(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", email or ""))
+
+
+def normalize_department(raw_department: str) -> str:
+    value = (raw_department or "").strip().upper()
+    aliases = {
+        "COMPUTER SCIENCE": "CSE",
+        "COMPUTER SCIENCE ENGINEERING": "CSE",
+        "C.S.E": "CSE",
+        "ELECTRONICS": "ECE",
+        "ELECTRONICS AND COMMUNICATION": "ECE",
+        "ELECTRONICS AND COMMUNICATION ENGINEERING": "ECE",
+        "E.C.E": "ECE",
+        "MECHANICAL": "ME",
+        "MECHANICAL ENGINEERING": "ME",
+    }
+    return aliases.get(value, value)
+
+
+def normalize_section(raw_section: str) -> str:
+    return (raw_section or "").strip().upper()
+
+
+def parse_semester_value(raw_sem: str) -> int:
+    value = (raw_sem or "").strip()
+    if not value:
+        return 1
+    try:
+        return int(value)
+    except ValueError:
+        try:
+            parsed = float(value)
+            if parsed.is_integer():
+                return int(parsed)
+        except ValueError:
+            pass
+    raise ValueError("Semester must be an integer")
+
+
+def ensure_academic_units_seeded(db: Session):
+    """Seed academic_units from existing student/admin data if table is empty."""
+    if db.query(AcademicUnit).count() > 0:
+        return
+
+    seen = set()
+    users = db.query(User).all()
+    for user in users:
+        dept = normalize_department(user.dept)
+        section = normalize_section(user.section)
+        if not dept or not section or dept == "ALL" or section == "ALL":
+            continue
+        key = (dept, section)
+        if key in seen:
+            continue
+        db.add(AcademicUnit(dept=dept, section=section, created_by="system"))
+        seen.add(key)
+
+    db.commit()
+
+
+def get_dynamic_academic_options(db: Session) -> Dict[str, Any]:
+    ensure_academic_units_seeded(db)
+
+    depts = set()
+    sections = set()
+    dept_sections: Dict[str, set] = {}
+
+    for unit in db.query(AcademicUnit).all():
+        dept = normalize_department(unit.dept)
+        section = normalize_section(unit.section)
+        if not dept or not section:
+            continue
+        depts.add(dept)
+        sections.add(section)
+        dept_sections.setdefault(dept, set()).add(section)
+
+    # Include values from existing users to avoid stale scope options.
+    for user in db.query(User).all():
+        dept = normalize_department(user.dept)
+        section = normalize_section(user.section)
+        if not dept or not section or dept == "ALL" or section == "ALL":
+            continue
+        depts.add(dept)
+        sections.add(section)
+        dept_sections.setdefault(dept, set()).add(section)
+
+    return {
+        "departments": sorted(depts),
+        "sections": sorted(sections),
+        "dept_sections": {dept: sorted(values) for dept, values in sorted(dept_sections.items())},
+    }
 
 def get_student_attendance(db: Session, email: str, threshold: float = 75.0) -> AttendanceResponse:
     """
@@ -691,6 +991,8 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    ensure_sample_student_data(db, user)
     return user
 
 # ============== DASHBOARD ENDPOINTS ==============
@@ -776,8 +1078,83 @@ def get_subject_attendance(email: str, subject_name: str, db: Session = Depends(
         "message": (
             f"Attend {classes_needed} consecutive classes to reach {summary.threshold_target}%"
             if classes_needed else 
-            f"You have {safe_bunks} safe bunks remaining!"
+            f"You can miss {safe_bunks} classes and still stay above {summary.threshold_target}%"
         )
+    }
+
+
+def _month_range(reference_date: date) -> tuple[date, date]:
+    """Return [start_of_month, start_of_next_month) for date filters."""
+    month_start = reference_date.replace(day=1)
+    if month_start.month == 12:
+        next_month_start = date(month_start.year + 1, 1, 1)
+    else:
+        next_month_start = date(month_start.year, month_start.month + 1, 1)
+    return month_start, next_month_start
+
+
+def get_monthly_attendance_overview(db: Session, email: str, reference_date: Optional[date] = None) -> Dict[str, Any]:
+    """
+    Build a month-wise attendance snapshot.
+    Uses detailed attendance rows when available; falls back to summary totals.
+    """
+    today = reference_date or date.today()
+    month_start, next_month_start = _month_range(today)
+
+    monthly_rows = db.query(Attendance).filter(
+        Attendance.student_email == email,
+        Attendance.date >= month_start,
+        Attendance.date < next_month_start,
+    ).all()
+
+    source = "attendance"
+    if monthly_rows:
+        total_classes = len(monthly_rows)
+        attended_classes = sum(1 for row in monthly_rows if (row.status or "").upper() in {"PRESENT", "LATE"})
+    else:
+        # Fallback for setups that maintain only summary-level attendance.
+        source = "summary_fallback"
+        summary_rows = db.query(AttendanceSummary).filter(
+            AttendanceSummary.student_email == email
+        ).all()
+        total_classes = sum(row.total for row in summary_rows)
+        attended_classes = sum(row.attended for row in summary_rows)
+
+    percentage = calculate_attendance_percentage(attended_classes, total_classes)
+    month_end_day = (next_month_start - timedelta(days=1)).day
+
+    return {
+        "month": month_start.strftime("%B %Y"),
+        "total_classes": total_classes,
+        "attended_classes": attended_classes,
+        "percentage": percentage,
+        "is_month_end": today.day == month_end_day,
+        "source": source,
+    }
+
+
+@app.get("/student/attendance-alerts")
+def get_attendance_alerts(email: str, db: Session = Depends(get_db)):
+    """Return proactive attendance alerts for chatbot and dashboard notifications."""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    attendance = get_student_attendance(db, email)
+    low_subjects = [
+        {
+            "subject_name": subject.subject_name,
+            "percentage": subject.percentage,
+            "classes_needed": subject.classes_needed,
+        }
+        for subject in attendance.subjects
+        if subject.percentage < 75
+    ]
+
+    return {
+        "has_low_attendance": len(low_subjects) > 0,
+        "low_attendance_subjects": low_subjects,
+        "monthly_summary": get_monthly_attendance_overview(db, email),
     }
 
 # ============== QUICK SYNC ENDPOINT ==============
@@ -920,6 +1297,94 @@ def create_resource(data: ResourceCreate, admin_email: str, db: Session = Depend
     db.commit()
     db.refresh(resource)
     return {"success": True, "message": "Resource created", "id": resource.id}
+
+
+@app.post("/admin/resources/upload")
+async def upload_resource(
+    title: str = Form(...),
+    description: str = Form(default=""),
+    file: UploadFile = File(...),
+    admin_email: str = Form(...),
+    dept: str = Form(default="ALL"),
+    section: str = Form(default="ALL"),
+    sem: int = Form(default=0),
+    db: Session = Depends(get_db)
+):
+    """Upload a resource file (PDF, DOCX, etc)"""
+    admin = get_admin_or_403(db, admin_email)
+    
+    # Create uploads directory if it doesn't exist
+    os.makedirs("uploads", exist_ok=True)
+    
+    # Validate file extension
+    allowed_extensions = {'.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.zip'}
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    
+    if file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {allowed_extensions}")
+    
+    # Save file with unique name
+    file_id = secrets.token_hex(8)
+    file_path = f"uploads/{file_id}_{file.filename}"
+    
+    try:
+        # Save uploaded file
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Create resource record
+        resource = Resource(
+            title=title,
+            description=description,
+            resource_type="DOCUMENT",
+            resource_url=f"/resources/download/{file_id}",
+            dept=dept,
+            section=section,
+            sem=sem,
+            uploaded_by=admin.email,
+            created_at=datetime.utcnow(),
+        )
+        db.add(resource)
+        db.commit()
+        db.refresh(resource)
+        
+        return {
+            "success": True,
+            "message": "Resource uploaded successfully",
+            "id": resource.id,
+            "download_url": f"/resources/download/{file_id}"
+        }
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/resources/download/{file_id}")
+def download_resource(file_id: str):
+    """Download uploaded resource file"""
+    try:
+        # Find file in uploads directory
+        upload_dir = "uploads"
+        if not os.path.exists(upload_dir):
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # Find file matching the ID
+        for filename in os.listdir(upload_dir):
+            if filename.startswith(file_id):
+                file_path = os.path.join(upload_dir, filename)
+                return FileResponse(
+                    file_path,
+                    filename=filename.split('_', 1)[1],
+                    media_type='application/octet-stream'
+                )
+        
+        raise HTTPException(status_code=404, detail="File not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/admin/resources")
@@ -1734,7 +2199,7 @@ async def bulk_upload_students(
         name = get_cell(name_idx)
         email = get_cell(email_idx).lower()
         roll_number = get_cell(roll_idx).upper()
-        department = get_cell(dept_idx).upper()
+        department = normalize_department(get_cell(dept_idx))
         section = get_cell(section_idx).upper() if section_idx is not None else "A"
         sem_raw = get_cell(sem_idx) if sem_idx is not None else "1"
 
@@ -1761,7 +2226,7 @@ async def bulk_upload_students(
             continue
 
         try:
-            sem = int(sem_raw) if sem_raw else 1
+            sem = parse_semester_value(sem_raw)
         except ValueError:
             errors.append({
                 "row_number": row_index,
@@ -1916,6 +2381,348 @@ def get_admin_stats(db: Session = Depends(get_db)):
         "announcements": announcement_count
     }
 
+
+@app.get("/admin/academic-options")
+def get_admin_academic_options(admin_email: str, db: Session = Depends(get_db)):
+    """Return dynamic department and section options for admin scope/forms."""
+    admin = get_admin_or_403(db, admin_email)
+    options = get_dynamic_academic_options(db)
+
+    departments = options["departments"]
+    sections = options["sections"]
+    dept_sections = options["dept_sections"]
+
+    if admin.dept != "ALL":
+        departments = [d for d in departments if d == admin.dept]
+        dept_sections = {k: v for k, v in dept_sections.items() if k == admin.dept}
+    if admin.section != "ALL":
+        sections = [s for s in sections if s == admin.section]
+        dept_sections = {k: [s for s in values if s == admin.section] for k, values in dept_sections.items()}
+
+    return {
+        "departments": departments,
+        "sections": sections,
+        "dept_sections": dept_sections,
+    }
+
+
+@app.post("/admin/academic-options")
+def create_admin_academic_option(data: AcademicUnitCreate, admin_email: str, db: Session = Depends(get_db)):
+    """Create new department/section option and make it available immediately in admin scope."""
+    admin = get_admin_or_403(db, admin_email)
+    dept = normalize_department(data.dept)
+    section = normalize_section(data.section)
+
+    if not dept or not section:
+        raise HTTPException(status_code=400, detail="Department and section are required")
+
+    if admin.dept != "ALL" and dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot create department outside admin scope")
+    if admin.section != "ALL" and section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot create section outside admin scope")
+
+    exists = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == dept,
+        AcademicUnit.section == section,
+    ).first()
+    if not exists:
+        db.add(AcademicUnit(dept=dept, section=section, created_by=admin.email))
+        db.commit()
+
+    return {
+        "success": True,
+        "message": "Academic option saved",
+        "dept": dept,
+        "section": section,
+    }
+
+
+@app.get("/admin/students")
+def list_admin_students(
+    admin_email: str,
+    dept: Optional[str] = None,
+    section: Optional[str] = None,
+    sem: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """List students with optional filters for admin student-management tab."""
+    admin = get_admin_or_403(db, admin_email)
+
+    query = db.query(User).filter(User.role == "STUDENT")
+
+    if admin.dept != "ALL":
+        query = query.filter(User.dept == admin.dept)
+    if admin.section != "ALL":
+        query = query.filter(User.section == admin.section)
+
+    normalized_dept = normalize_department(dept) if dept else None
+    normalized_section = normalize_section(section) if section else None
+
+    if normalized_dept:
+        query = query.filter(User.dept == normalized_dept)
+    if normalized_section:
+        query = query.filter(User.section == normalized_section)
+    if sem is not None:
+        query = query.filter(User.sem == sem)
+
+    students = query.order_by(User.dept, User.section, User.sem, User.roll_number).all()
+    return {
+        "students": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "email": s.email,
+                "roll_number": s.roll_number,
+                "dept": s.dept,
+                "section": s.section,
+                "sem": s.sem,
+            }
+            for s in students
+        ]
+    }
+
+
+@app.post("/admin/students")
+def create_admin_student(data: StudentCreateRequest, admin_email: str, db: Session = Depends(get_db)):
+    """Create single student account from admin student-management tab."""
+    admin = get_admin_or_403(db, admin_email)
+
+    email = (data.email or "").strip().lower()
+    roll_number = (data.roll_number or "").strip().upper()
+    name = (data.name or "").strip()
+    dept = normalize_department(data.dept)
+    section = normalize_section(data.section)
+
+    if not name or not email or not roll_number or not dept or not section:
+        raise HTTPException(status_code=400, detail="Name, email, roll number, dept and section are required")
+    if not is_valid_email(email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    if data.sem < 1:
+        raise HTTPException(status_code=400, detail="Semester must be >= 1")
+
+    if admin.dept != "ALL" and dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot create student outside admin department")
+    if admin.section != "ALL" and section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot create student outside admin section")
+
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+    if db.query(User).filter(User.roll_number == roll_number).first():
+        raise HTTPException(status_code=400, detail="Roll number already exists")
+    if db.query(User).filter(User.username == roll_number).first():
+        raise HTTPException(status_code=400, detail="Username conflict for roll number")
+
+    plain_password = (data.password or "").strip() or generate_default_password()
+    user = User(
+        name=name,
+        email=email,
+        username=roll_number,
+        roll_number=roll_number,
+        dept=dept,
+        section=section,
+        sem=data.sem,
+        role="STUDENT",
+        password=hash_password(plain_password),
+    )
+    db.add(user)
+
+    existing_unit = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == dept,
+        AcademicUnit.section == section,
+    ).first()
+    if not existing_unit:
+        db.add(AcademicUnit(dept=dept, section=section, created_by=admin.email))
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Student created",
+        "credentials": {
+            "email": email,
+            "username": roll_number,
+            "password": plain_password,
+        },
+    }
+
+
+@app.put("/admin/students/{student_email}")
+def update_admin_student(student_email: str, data: StudentCreateRequest, admin_email: str, db: Session = Depends(get_db)):
+    """Update a student account from admin student-management tab."""
+    admin = get_admin_or_403(db, admin_email)
+    email = (student_email or "").strip().lower()
+
+    student = db.query(User).filter(User.email == email, User.role == "STUDENT").first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if admin.dept != "ALL" and student.dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot edit student outside admin department")
+    if admin.section != "ALL" and student.section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot edit student outside admin section")
+
+    # Normalize and validate updates
+    new_dept = normalize_department(data.dept)
+    new_section = normalize_section(data.section)
+    new_name = (data.name or "").strip()
+    new_email = (data.email or "").strip().lower()
+    new_roll = (data.roll_number or "").strip().upper()
+
+    if not new_name or not new_email or not new_roll or not new_dept or not new_section:
+        raise HTTPException(status_code=400, detail="All fields are required")
+    if not is_valid_email(new_email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    if data.sem < 1:
+        raise HTTPException(status_code=400, detail="Semester must be >= 1")
+
+    # Check scope for new department/section
+    if admin.dept != "ALL" and new_dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot assign student outside admin department")
+    if admin.section != "ALL" and new_section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot assign student outside admin section")
+
+    # Verify no duplicate email (if email changed)
+    if new_email != email and db.query(User).filter(User.email == new_email).first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+    # Verify no duplicate roll (if roll changed)
+    if new_roll != student.roll_number and db.query(User).filter(User.roll_number == new_roll).first():
+        raise HTTPException(status_code=400, detail="Roll number already exists")
+
+    # Update student
+    student.name = new_name
+    student.email = new_email
+    student.roll_number = new_roll
+    student.username = new_roll
+    student.dept = new_dept
+    student.section = new_section
+    student.sem = data.sem
+
+    # Auto-create academic unit if needed
+    existing_unit = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == new_dept,
+        AcademicUnit.section == new_section,
+    ).first()
+    if not existing_unit:
+        db.add(AcademicUnit(dept=new_dept, section=new_section, created_by=admin.email))
+
+    db.commit()
+    return {
+        "success": True,
+        "message": "Student updated",
+        "student": {
+            "id": student.id,
+            "name": student.name,
+            "email": student.email,
+            "roll_number": student.roll_number,
+            "dept": student.dept,
+            "section": student.section,
+            "sem": student.sem,
+        }
+    }
+
+
+@app.delete("/admin/students/{student_email}")
+def delete_admin_student(student_email: str, admin_email: str, db: Session = Depends(get_db)):
+    """Delete a student account from admin student-management tab."""
+    admin = get_admin_or_403(db, admin_email)
+    email = (student_email or "").strip().lower()
+
+    student = db.query(User).filter(User.email == email, User.role == "STUDENT").first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if admin.dept != "ALL" and student.dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot delete student outside admin department")
+    if admin.section != "ALL" and student.section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot delete student outside admin section")
+
+    db.delete(student)
+    db.commit()
+    return {"success": True, "message": "Student deleted"}
+
+
+@app.put("/admin/academic-options")
+def update_admin_academic_option(data: AcademicUnitCreate, old_dept: str, old_section: str, admin_email: str, db: Session = Depends(get_db)):
+    """Update an existing department/section combination."""
+    admin = get_admin_or_403(db, admin_email)
+    
+    old_dept = normalize_department(old_dept)
+    old_section = normalize_section(old_section)
+    new_dept = normalize_department(data.dept)
+    new_section = normalize_section(data.section)
+
+    if not old_dept or not old_section or not new_dept or not new_section:
+        raise HTTPException(status_code=400, detail="Department and section are required")
+
+    if admin.dept != "ALL" and (old_dept != admin.dept or new_dept != admin.dept):
+        raise HTTPException(status_code=403, detail="Cannot modify department outside admin scope")
+    if admin.section != "ALL" and (old_section != admin.section or new_section != admin.section):
+        raise HTTPException(status_code=403, detail="Cannot modify section outside admin scope")
+
+    # Find the academic unit to update
+    unit = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == old_dept,
+        AcademicUnit.section == old_section,
+    ).first()
+    
+    if not unit:
+        raise HTTPException(status_code=404, detail="Department/section combination not found")
+
+    # Check if new combination already exists
+    existing = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == new_dept,
+        AcademicUnit.section == new_section,
+    ).first()
+    if existing and existing.id != unit.id:
+        raise HTTPException(status_code=400, detail="This department/section combination already exists")
+
+    # Update the unit
+    unit.dept = new_dept
+    unit.section = new_section
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Department/section updated",
+        "dept": new_dept,
+        "section": new_section,
+    }
+
+
+@app.delete("/admin/academic-options")
+def delete_admin_academic_option(dept: str, section: str, admin_email: str, db: Session = Depends(get_db)):
+    """Delete a department/section combination."""
+    admin = get_admin_or_403(db, admin_email)
+    
+    dept = normalize_department(dept)
+    section = normalize_section(section)
+
+    if not dept or not section:
+        raise HTTPException(status_code=400, detail="Department and section are required")
+
+    if admin.dept != "ALL" and dept != admin.dept:
+        raise HTTPException(status_code=403, detail="Cannot delete department outside admin scope")
+    if admin.section != "ALL" and section != admin.section:
+        raise HTTPException(status_code=403, detail="Cannot delete section outside admin scope")
+
+    unit = db.query(AcademicUnit).filter(
+        AcademicUnit.dept == dept,
+        AcademicUnit.section == section,
+    ).first()
+    
+    if not unit:
+        raise HTTPException(status_code=404, detail="Department/section combination not found")
+
+    # Check if any students are in this dept/section
+    students = db.query(User).filter(User.dept == dept, User.section == section, User.role == "STUDENT").count()
+    if students > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete: {students} student(s) assigned to this department/section")
+
+    db.delete(unit)
+    db.commit()
+
+    return {"success": True, "message": "Department/section deleted"}
+
 # ============== INTELLIGENT ASSISTANT ==============
 
 ASSISTANT_SYSTEM_PROMPT = """
@@ -1927,9 +2734,10 @@ You are an intelligent Student Assistant at the college.
 - Proactive in identifying attendance shortages
 - Encouraging and supportive in tone
 - Always action-oriented with clear next steps
+- Understand natural language flexibly (short forms, typos, mixed phrasing, Hinglish-style wording)
 
 **Your Expertise:**
-1. **Attendance Management**: Use the student's database records to provide precise answers about attendance percentage, classes needed to reach 75%, and safe bunks available
+1. **Attendance Management**: Use the student's database records to provide precise answers about attendance percentage, classes needed to reach 75%, and attendance buffer
 2. **Schedule Planning**: Help students understand their timetable and today's classes
 3. **College Information**: Share college policies, facilities, placements details
 4. **Announcements**: Keep students informed about important college updates
@@ -1946,6 +2754,7 @@ You are an intelligent Student Assistant at the college.
 - Be precise with numbers and percentages
 - Suggest specific action items
 - Use emojis sparingly but effectively (📚, ✅, ⚠️)
+- Never require students to ask in a fixed pattern; infer intent from natural language
 - If data is unavailable, say so and guide them to take action
 - Keep responses concise (2-3 sentences max)
 - Always end with a helpful suggestion or question
@@ -1977,6 +2786,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
     announcements = db.query(Announcement).filter(
         (Announcement.target_dept == user.dept) | (Announcement.target_dept == "ALL")
     ).order_by(Announcement.date.desc()).limit(5).all()
+    monthly_summary = get_monthly_attendance_overview(db, request.user_email)
     
     # Build context message
     context_msg = f"""
@@ -1984,6 +2794,7 @@ User: {user.name} ({user.roll_number})
 Department: {user.dept}, Section {user.section}, Semester {user.sem}
 
 Current Attendance: {attendance.overall_percentage}% ({attendance.overall_status})
+Monthly Attendance Snapshot ({monthly_summary['month']}): {monthly_summary['attended_classes']}/{monthly_summary['total_classes']} ({monthly_summary['percentage']}%)
 Low attendance subjects:
 """
     
@@ -2047,11 +2858,57 @@ Respond with accurate, actionable guidance."""
     return generate_assistant_local_response(message, user, attendance, timetable, [])
 
 def generate_assistant_local_response(message: str, user, attendance, timetable, announcements) -> str:
-    """Generate intelligent local response based on student data"""
+    """Generate intelligent local response based on student data and natural-language intent."""
     msg_lower = message.lower()
+    cleaned_message = re.sub(r"[^a-z0-9\s]", " ", msg_lower)
+    tokens = {token for token in cleaned_message.split() if token}
+
+    def has_intent(*keywords: str) -> bool:
+        """Check intent with phrase-aware and token-aware matching."""
+        return any((keyword in msg_lower) or (keyword in tokens) for keyword in keywords)
+
+    def college_info_response() -> str:
+        info = COLLEGE_DATA.get("college_info", {})
+        placements = COLLEGE_DATA.get("placements", {}).get("overview", {})
+        facilities = COLLEGE_DATA.get("facilities", {})
+        dept_data = COLLEGE_DATA.get("departments", {}).get(user.dept, {})
+
+        if has_intent("placement", "placements", "package", "recruiter", "job"):
+            if placements:
+                return (
+                    f"🎯 Placements snapshot: {placements.get('placement_rate', 'N/A')} placement rate, "
+                    f"highest package {placements.get('highest_package', 'N/A')}, average {placements.get('average_package', 'N/A')}. "
+                    f"Want top recruiters list too?"
+                )
+            return "🎯 Placement data is not available right now. Check with the placement cell for latest drives."
+
+        if has_intent("library", "hostel", "sports", "canteen", "facility", "facilities", "transport"):
+            library_timing = facilities.get("library", {}).get("timing", "N/A")
+            hostel_capacity = facilities.get("hostel", {}).get("boys_hostel", {}).get("capacity", 0) + facilities.get("hostel", {}).get("girls_hostel", {}).get("capacity", 0)
+            return (
+                f"🏫 Campus facilities: Library timing is {library_timing}, hostel capacity is about {hostel_capacity}, "
+                f"and sports + transport facilities are available. Need details for a specific facility?"
+            )
+
+        if has_intent("department", "hod", "lab", "labs", "specialization", "specializations") and dept_data:
+            labs = dept_data.get("labs", [])[:3]
+            return (
+                f"🏛️ {user.dept} department: HOD is {dept_data.get('hod', 'N/A')}. "
+                f"Popular labs include {', '.join(labs) if labs else 'N/A'}. "
+                f"Want semester-wise subjects too?"
+            )
+
+        if info:
+            return (
+                f"🏫 {info.get('name', 'Your college')} is in {info.get('location', 'N/A')} and is "
+                f"accredited as {info.get('accreditation', 'N/A')}. "
+                f"If you want, I can share contacts, fees, facilities, or placement details."
+            )
+
+        return "🏫 I can help with college details like placements, facilities, rules, and contacts. Ask me what you need."
     
     # Attendance queries
-    if any(word in msg_lower for word in ["attendance", "percentage", "bunk", "safe"]):
+    if has_intent("attendance", "percentage", "bunk", "safe", "shortage", "low attendance", "drop", "dropped"):
         if attendance.overall_status == "NO_DATA":
             return "📊 No attendance data available yet. Once your classes are recorded, I can help you track progress!"
         
@@ -2061,10 +2918,10 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
             return f"⚠️ Your {worst.subject_name} is at {worst.percentage}% - attend {worst.classes_needed} more classes to reach 75%! You've got this! 💪"
         else:
             safe_bunks = sum(s.safe_bunks or 0 for s in attendance.subjects) // len(attendance.subjects) if attendance.subjects else 0
-            return f"✅ Great attendance! You're at {attendance.overall_percentage}% overall. You have ~{safe_bunks} safe bunks per subject. Keep it up! 🎯"
+            return f"✅ Great attendance! You're at {attendance.overall_percentage}% overall. You have an attendance buffer of ~{safe_bunks} classes per subject. Keep it up! 🎯"
     
     # Schedule queries
-    if any(word in msg_lower for word in ["schedule", "timetable", "class", "today", "tomorrow"]):
+    if has_intent("schedule", "timetable", "class", "classes", "today", "tomorrow", "slot", "period"):
         from datetime import datetime
         today = datetime.now().strftime("%A")
         today_classes = [t for t in timetable if t.day_of_week == today]
@@ -2077,13 +2934,35 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
             return f"📚 Your classes today ({today}):\n{classes_info}\n\nReady to learn? Let's go! 🚀"
         else:
             return f"🎉 No classes today ({today})! Perfect time for self-study or revision. 📖"
+
+    # Announcements queries
+    if has_intent("announcement", "announcements", "notice", "notices", "update", "updates", "news"):
+        if not announcements:
+            return "📢 No new announcements right now. I can still help with schedule, attendance, or college info."
+        latest = announcements[0]
+        return f"📢 Latest announcement: {latest.title}. Want me to summarize all recent updates?"
+
+    # College information queries
+    if has_intent(
+        "college", "clg", "campus", "placement", "facilities", "library", "hostel",
+        "rules", "regulations", "fees", "department", "hod", "syllabus", "contacts"
+    ):
+        return college_info_response()
+
+    # Notification/reminder queries
+    if has_intent("notify", "notification", "remind", "reminder", "alert", "alerts"):
+        low_subjects = [s for s in attendance.subjects if s.percentage < 75]
+        if low_subjects:
+            worst = min(low_subjects, key=lambda x: x.percentage)
+            return f"🔔 Alert set mentally: {worst.subject_name} is currently {worst.percentage}%. Attend {worst.classes_needed} classes to reach 75%."
+        return f"🔔 You're currently at {attendance.overall_percentage}% overall, above the 75% threshold. I'll keep highlighting any risk subjects."
     
     # General help
-    if "help" in msg_lower or "what can" in msg_lower or "how" in msg_lower:
-        return "I'm your smart campus assistant! 🎓 I can help with:\n• Attendance tracking & planning\n• Your daily schedule\n• College announcements\n• Study resources\nWhat do you need help with?"
+    if has_intent("help", "what can", "how", "support", "assist"):
+        return "I'm your smart campus assistant! 🎓 I can help with attendance planning, schedule, announcements, and college info (placements/facilities/rules). What do you need?"
     
     # Default response
-    return f"Got it! 👋 I'm here to help with your attendance, schedule, and college info. Try asking about your attendance percentage or today's schedule!"
+    return "I can help with attendance, schedule, announcements, and any college-related questions in normal language. Try asking in your own words, like 'how is my attendance now?' or 'placement details please'."
 
 # ============== INITIALIZATION ==============
 
@@ -2098,6 +2977,14 @@ def root():
         "status": "running",
         "assistant": "Intelligent Student Assistant"
     }
+
+
+@app.get("/tailwind.min.css")
+def serve_tailwind_css():
+    """Serve locally hosted Tailwind stylesheet."""
+    if os.path.exists("tailwind.min.css"):
+        return FileResponse("tailwind.min.css", media_type="text/css")
+    raise HTTPException(status_code=404, detail="tailwind.min.css not found")
 
 
 @app.get("/script.js")
