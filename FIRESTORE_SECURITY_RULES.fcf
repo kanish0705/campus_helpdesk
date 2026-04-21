@@ -1,0 +1,69 @@
+                                                            rules_version = "2";
+                                                            service cloud.firestore {
+                                                            match /databases/{database}/documents {
+                                                                
+                                                                function isAuthenticated() {
+                                                                return request.auth != null;
+                                                                }
+                                                                
+                                                                function getUserDoc(email) {
+                                                                return get(/databases/$(database)/documents/users/$(email.lower()));
+                                                                }
+                                                                
+                                                                function isAdmin(email) {
+                                                                return isAuthenticated() && 
+                                                                        getUserDoc(email).data.get('role', 'STUDENT') == 'ADMIN';
+                                                                }
+
+                                                                
+                                                                // ============== USERS COLLECTION ==============
+                                                                match /users/{email} {
+                                                                allow read, write: if true;
+                                                                
+                                                                // CHATS SUBCOLLECTION
+                                                                match /chats/{chatId} {
+                                                                    allow read, write: if true;
+                                                                    
+                                                                    // MESSAGES SUBCOLLECTION
+                                                                    match /messages/{messageId} {
+                                                                    allow read, write: if true;
+                                                                    }
+                                                                }
+                                                                }
+
+                                                                // ============== TIMETABLE COLLECTION ==============
+                                                                match /timetable/{entryId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== ATTENDANCE COLLECTION ==============
+                                                                match /attendance/{recordId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== ATTENDANCE SUMMARY COLLECTION ==============
+                                                                match /attendance_summary/{summaryId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== ANNOUNCEMENTS COLLECTION ==============
+                                                                match /announcements/{announcementId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== RESOURCES COLLECTION ==============
+                                                                match /resources/{resourceId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== ACADEMIC UNITS COLLECTION ==============
+                                                                match /academic_units/{unitId} {
+                                                                allow read, write: if true;
+                                                                }
+
+                                                                // ============== DEFAULT DENY ==============
+                                                                match /{document=**} {
+                                                                allow read, write: if true;
+                                                                }
+                                                            }
+                                                            }

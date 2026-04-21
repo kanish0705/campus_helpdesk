@@ -1,0 +1,6 @@
+row_number,name,email,roll_number,department,error
+2,Arun Kumar,arun.kumar@college.edu,24CSE301,CSE,Duplicate email
+3,Nisha Verma,nisha.verma@college.edu,24CSE302,CSE,Duplicate email
+4,Rohit Iyer,rohit.iyer@college.edu,24CSE303,CSE,Duplicate email
+5,Meera Nair,meera.nair@college.edu,24CSE304,CSE,Duplicate email
+6,Kavin Raj,kavin.raj@college.edu,24CSE305,CSE,Duplicate email

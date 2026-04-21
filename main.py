@@ -2771,22 +2771,36 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
     Intelligent Student Assistant
     Uses student data from database for precise, context-aware responses.
     """
-    user = db.query(User).filter(User.email == request.user_email).first()
+    email = (request.user_email or "").strip().lower()
+    message = (request.message or "").strip()
+
+    if not email:
+        return ChatResponse(response="Please login again so I can identify your student profile.")
+
+    if not message:
+        return ChatResponse(response="Please type a question. I can help with attendance, timetable, announcements, and campus info.")
+
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         return ChatResponse(response="User not found. Please login first.")
+
+    if user.role != "STUDENT":
+        return ChatResponse(response="This assistant is available only on the student dashboard. Please login with a student account.")
     
     # Gather student context from database
-    attendance = get_student_attendance(db, request.user_email)
+    attendance = get_student_attendance(db, email)
     timetable = db.query(Timetable).filter(
         Timetable.dept == user.dept,
         Timetable.section == user.section,
         Timetable.sem == user.sem
     ).all()
     
-    announcements = db.query(Announcement).filter(
-        (Announcement.target_dept == user.dept) | (Announcement.target_dept == "ALL")
-    ).order_by(Announcement.date.desc()).limit(5).all()
-    monthly_summary = get_monthly_attendance_overview(db, request.user_email)
+    all_announcements = db.query(Announcement).order_by(Announcement.date.desc()).all()
+    announcements = [
+        ann for ann in all_announcements
+        if announcement_visible_for_user(ann, user)
+    ][:5]
+    monthly_summary = get_monthly_attendance_overview(db, email)
     
     # Build context message
     context_msg = f"""
@@ -2801,6 +2815,11 @@ Low attendance subjects:
     for subject in attendance.subjects:
         if subject.percentage < 75:
             context_msg += f"\n- {subject.subject_name}: {subject.percentage}% (need {subject.classes_needed} classes)"
+
+    if announcements:
+        context_msg += "\nRecent announcements:"
+        for ann in announcements[:3]:
+            context_msg += f"\n- {ann.title} ({ann.priority})"
     
     # Use Groq API if available, otherwise generate local response
     if GROQ_API_KEY:
@@ -2863,9 +2882,17 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
     cleaned_message = re.sub(r"[^a-z0-9\s]", " ", msg_lower)
     tokens = {token for token in cleaned_message.split() if token}
 
+    subject_by_name = {s.subject_name.lower(): s for s in attendance.subjects}
+
     def has_intent(*keywords: str) -> bool:
         """Check intent with phrase-aware and token-aware matching."""
         return any((keyword in msg_lower) or (keyword in tokens) for keyword in keywords)
+
+    def extract_subject_query():
+        for subject in attendance.subjects:
+            if subject.subject_name.lower() in msg_lower:
+                return subject
+        return None
 
     def college_info_response() -> str:
         info = COLLEGE_DATA.get("college_info", {})
@@ -2907,8 +2934,29 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
 
         return "🏫 I can help with college details like placements, facilities, rules, and contacts. Ask me what you need."
     
+    if has_intent("hi", "hello", "hey", "good morning", "good afternoon", "good evening"):
+        return f"Hi {user.name}! 👋 I'm your student assistant. Ask me about attendance, timetable, announcements, placements, or facilities."
+
+    if has_intent("my name", "who am i", "profile", "about me", "which department", "my department"):
+        return (
+            f"You are {user.name} ({user.roll_number}), {user.dept}-{user.section}, semester {user.sem}. "
+            f"Current overall attendance is {attendance.overall_percentage}%. Need a subject-wise breakdown?"
+        )
+
     # Attendance queries
     if has_intent("attendance", "percentage", "bunk", "safe", "shortage", "low attendance", "drop", "dropped"):
+        subject_match = extract_subject_query()
+        if subject_match:
+            if subject_match.percentage < 75:
+                return (
+                    f"📉 In {subject_match.subject_name}, your attendance is {subject_match.percentage}% "
+                    f"({subject_match.attended}/{subject_match.total}). Attend {subject_match.classes_needed} more classes to reach 75%."
+                )
+            return (
+                f"✅ In {subject_match.subject_name}, your attendance is {subject_match.percentage}% "
+                f"({subject_match.attended}/{subject_match.total}). You can safely miss about {subject_match.safe_bunks or 0} class(es)."
+            )
+
         if attendance.overall_status == "NO_DATA":
             return "📊 No attendance data available yet. Once your classes are recorded, I can help you track progress!"
         
@@ -2940,7 +2988,7 @@ def generate_assistant_local_response(message: str, user, attendance, timetable,
         if not announcements:
             return "📢 No new announcements right now. I can still help with schedule, attendance, or college info."
         latest = announcements[0]
-        return f"📢 Latest announcement: {latest.title}. Want me to summarize all recent updates?"
+        return f"📢 Latest for {user.dept}-{user.section}: {latest.title}. Want a quick summary of all recent updates?"
 
     # College information queries
     if has_intent(

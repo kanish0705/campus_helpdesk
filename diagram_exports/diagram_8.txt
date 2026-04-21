@@ -1,0 +1,61 @@
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│              STUDENT MANAGEMENT PORTAL                         │
+│                (Browser-Based Application)                     │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │           Frontend (HTML/CSS/JavaScript)                │  │
+│  │  - Login Interface                                       │  │
+│  │  - Student Dashboard                                     │  │
+│  │  - Admin Control Panel                                   │  │
+│  │  - Resource Management UI                                │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                           ↓↑                                    │
+│                    REST API (HTTP)                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓↑
+┌─────────────────────────────────────────────────────────────────┐
+│                    Backend Server                               │
+│            (FastAPI on 127.0.0.1:8000)                         │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  API Layer (FastAPI Routes)                            │   │
+│  │  - Authentication Endpoints                             │   │
+│  │  - Student Endpoints                                    │   │
+│  │  - Admin Endpoints                                      │   │
+│  │  - File Operations                                      │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                           ↓↑                                    │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Business Logic Layer                                  │   │
+│  │  - Authentication Handler                               │   │
+│  │  - Data Processing                                      │   │
+│  │  - Validation                                           │   │
+│  │  - File Management                                      │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                           ↓↑                                    │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Data Access Layer (SQLAlchemy ORM)                    │   │
+│  │  - User Management                                      │   │
+│  │  - Attendance Tracking                                  │   │
+│  │  - Timetable Management                                 │   │
+│  │  - Announcements                                        │   │
+│  │  - Resources                                            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                           ↓↑                                    │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓↑
+┌─────────────────────────────────────────────────────────────────┐
+│                   Database Layer                                │
+│              (SQLite - campus.db)                              │
+│                                                                 │
+│  ├─ Users Table                                                │
+│  ├─ Attendance Table                                           │
+│  ├─ AttendanceSummary Table                                    │
+│  ├─ Timetable Table                                            │
+│  ├─ Announcements Table                                        │
+│  ├─ Resources Table                                            │
+│  └─ AcademicUnits Table                                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘

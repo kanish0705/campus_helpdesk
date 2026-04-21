@@ -1,0 +1,10 @@
+Column              Type        Purpose
+──────────────────────────────────────────────────────
+id                  Integer     Primary Key
+file_id             String(100) Unique file identifier
+original_name       String(200) Original filename
+file_path           String(500) Storage path
+file_size           Integer     Size in bytes
+mime_type           String(100) Content type
+uploaded_at         DateTime    Upload timestamp
+uploaded_by         String(100) Uploader email

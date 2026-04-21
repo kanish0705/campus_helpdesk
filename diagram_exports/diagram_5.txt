@@ -1,0 +1,12 @@
+Column              Type        Purpose
+──────────────────────────────────────────────────────
+id                  Integer     Primary Key
+title               String(200) Announcement title
+body                Text        Full content
+image_url           String(500) Image/thumbnail URL
+priority            String(20)  urgent/high/normal
+target_depts        String(500) CSV of departments
+target_sections     String(500) CSV of sections
+target_semesters    String(500) CSV of semesters
+created_at          DateTime    Creation timestamp
+created_by          String(100) Admin email who created

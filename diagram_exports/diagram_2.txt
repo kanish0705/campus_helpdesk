@@ -1,0 +1,12 @@
+Column          Type        Purpose
+─────────────────────────────────────────────────────
+id              Integer     Primary Key
+email           String(100) Unique user identifier (indexed)
+password_hash   String(256) Hashed password (SHA-256)
+name            String(100) Full name
+roll_number     String(20)  Student/Staff ID
+role            String(20)  ADMIN or STUDENT (indexed)
+dept            String(50)  Department code (indexed)
+section         String(10)  Section (A/B/C) (indexed)
+sem             Integer     Semester (1-8)
+created_at      DateTime    Account creation timestamp

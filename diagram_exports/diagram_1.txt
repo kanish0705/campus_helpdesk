@@ -1,0 +1,75 @@
+┌─────────────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER (Browser)                        │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  index.html (Single Page Application)                        │  │
+│  │  - Login/Registration Interface                              │  │
+│  │  - Navigation (Sidebar + Header)                             │  │
+│  │  - View Components (Dashboard, Schedule, Attendance, etc)    │  │
+│  │  - Admin Panels (Manage Timetable, Users, Announcements)     │  │
+│  │  - Chat Widget + Interactive UI                             │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  JavaScript Functions (index.html embedded)                  │  │
+│  │  - Authentication (login, logout, session)                   │  │
+│  │  - Data Loading (dashboard, schedule, attendance)            │  │
+│  │  - CRUD Operations (create, read, update, delete)            │  │
+│  │  - Admin Scope Management (dept/section filtering)           │  │
+│  │  - Chat Interface & AI Responses                             │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↕ (REST API calls via fetch)
+┌─────────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER (FastAPI)                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  main.py (FastAPI Application)                               │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  Authentication Endpoints                              │  │  │
+│  │  │  - POST /login (email/password validation)             │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  Student Endpoints (/student/*)                        │  │  │
+│  │  │  - GET /dashboard (dashboard stats)                    │  │  │
+│  │  │  - GET /attendance (overall & subject-wise)            │  │  │
+│  │  │  - GET /timetable (class schedule)                     │  │  │
+│  │  │  - GET /resources (downloadable materials)             │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  Admin Endpoints (/admin/*)                            │  │  │
+│  │  │  - GET /timetable (view/manage timetable)              │  │  │
+│  │  │  - POST /timetable (create/update timetable)           │  │  │
+│  │  │  - GET /announcements (view all announcements)         │  │  │
+│  │  │  - POST /announcement (create announcement)            │  │  │
+│  │  │  - GET /attendance (view all attendance)               │  │  │
+│  │  │  - GET /students (manage student records)              │  │  │
+│  │  │  - POST /resources (upload resources)                  │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  Public Endpoints                                      │  │  │
+│  │  │  - GET /announcements (view public announcements)      │  │  │
+│  │  │  - GET /resources/download/{file_id}                  │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Middleware & Security                                       │  │
+│  │  - CORS (Cross-Origin Resource Sharing)                      │  │
+│  │  - Password Hashing (SHA-256)                                │  │
+│  │  - Role-Based Access Control (RBAC)                          │  │
+│  │  - Admin Scope Filtering                                     │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↕ (SQLAlchemy ORM)
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DATA LAYER (SQLite Database)                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  campus.db (SQLite Database File)                            │  │
+│  │  ┌────────────────────────────────────────────────────────┐  │  │
+│  │  │  Tables:                                               │  │  │
+│  │  │  - users (authentication & profile)                    │  │  │
+│  │  │  - attendance_summary (subject-wise attendance)        │  │  │
+│  │  │  - timetable (class schedule entries)                  │  │  │
+│  │  │  - announcement (college announcements)                │  │  │
+│  │  │  - resource (uploaded files & documents)               │  │  │
+│  │  │  - stored_resources (file metadata)                    │  │  │
+│  │  └────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘

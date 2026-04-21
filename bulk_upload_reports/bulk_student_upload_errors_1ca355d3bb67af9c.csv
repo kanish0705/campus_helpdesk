@@ -1,0 +1,7 @@
+row_number,name,email,roll_number,department,error
+3,Missing Email,,24CSE402,CSE,Missing required fields
+4,Bad Email,bad-email-format,24CSE403,CSE,Invalid email format
+5,Duplicate Email,valid.student@college.edu,24CSE404,CSE,Duplicate email
+6,Duplicate Roll,another.student@college.edu,24CSE401,CSE,Duplicate roll number
+7,Missing Department,nodept.student@college.edu,24CSE405,,Missing required fields
+8,Bad Semester,sem.error@college.edu,24CSE406,CSE,Semester must be an integer

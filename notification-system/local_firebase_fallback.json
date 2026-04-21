@@ -1,0 +1,105 @@
+{
+  "students": {
+    "S001": {
+      "name": "Rahul Sharma",
+      "parent_phone": "+919876543210",
+      "parent_name": "Mr. Sharma",
+      "created_at": "2026-04-21T18:51:51.934257",
+      "status": "active"
+    },
+    "S002": {
+      "name": "Priya Kumar",
+      "parent_phone": "+919876543211",
+      "parent_name": "Mrs. Kumar",
+      "created_at": "2026-04-21T18:51:51.937325",
+      "status": "active"
+    },
+    "S003": {
+      "name": "Arjun Patel",
+      "parent_phone": "+919876543212",
+      "parent_name": "Mr. Patel",
+      "created_at": "2026-04-21T18:51:51.973944",
+      "status": "active"
+    },
+    "S004": {
+      "name": "Neha Singh",
+      "parent_phone": "+919876543213",
+      "parent_name": "Mrs. Singh",
+      "created_at": "2026-04-21T18:51:51.983609",
+      "status": "active"
+    },
+    "S005": {
+      "name": "Arun Desai",
+      "parent_phone": "+919876543214",
+      "parent_name": "Mr. Desai",
+      "created_at": "2026-04-21T18:51:51.996354",
+      "status": "active"
+    }
+  },
+  "attendance": [
+    {
+      "student_id": "S001",
+      "date": "2026-04-21",
+      "status": "absent",
+      "recorded_at": "2026-04-21T18:51:52.047800"
+    }
+  ],
+  "announcements": [
+    {
+      "message": "Demo announcement for parents",
+      "date": "2026-04-21",
+      "timestamp": "2026-04-21T18:51:52.089651",
+      "target_audience": "all"
+    }
+  ],
+  "notifications": [
+    {
+      "student_id": "S001",
+      "type": "attendance",
+      "message": "Rahul Sharma was absent on 2026-04-21",
+      "phone_number": "+919876543210",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.048635"
+    },
+    {
+      "student_id": "S001",
+      "type": "announcement",
+      "message": "Demo announcement for parents",
+      "phone_number": "+919876543210",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.101873"
+    },
+    {
+      "student_id": "S002",
+      "type": "announcement",
+      "message": "Demo announcement for parents",
+      "phone_number": "+919876543211",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.103502"
+    },
+    {
+      "student_id": "S003",
+      "type": "announcement",
+      "message": "Demo announcement for parents",
+      "phone_number": "+919876543212",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.113829"
+    },
+    {
+      "student_id": "S004",
+      "type": "announcement",
+      "message": "Demo announcement for parents",
+      "phone_number": "+919876543213",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.126432"
+    },
+    {
+      "student_id": "S005",
+      "type": "announcement",
+      "message": "Demo announcement for parents",
+      "phone_number": "+919876543214",
+      "status": "sent",
+      "timestamp": "2026-04-21T18:51:52.134832"
+    }
+  ]
+}

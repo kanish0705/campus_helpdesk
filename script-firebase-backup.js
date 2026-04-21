@@ -140,16 +140,11 @@ async function login() {
       console.log('✓ Dashboard shown');
     }
 
-    // Show chat widget only for students (assistant is student-dashboard only)
+    // Show chat widget
     const chatWidget = document.getElementById('chatWidget');
     if (chatWidget) {
-      if (currentUser.role === 'STUDENT') {
-        chatWidget.classList.remove('hidden');
-        console.log('✓ Chat widget shown (student)');
-      } else {
-        chatWidget.classList.add('hidden');
-        console.log('✓ Chat widget hidden (non-student)');
-      }
+      chatWidget.classList.remove('hidden');
+      console.log('✓ Chat widget shown');
     }
 
     // Load user's chats (but don't wait for it - lazy load in background)
@@ -362,11 +357,6 @@ async function sendChatMessage() {
       return;
     }
 
-    if (currentUser.role !== 'STUDENT') {
-      showToast('Chat assistant is only available for student dashboard', 'error');
-      return;
-    }
-
     // Add user message
     await addMessage(currentUser.email, currentChatId, 'user', text);
     console.log('✓ Message sent');
@@ -374,29 +364,11 @@ async function sendChatMessage() {
     // Clear input
     if (input) input.value = '';
 
-    // Get personalized backend response
-    let botResponse = 'I could not process that right now. Please try again.';
-    try {
-      const response = await fetch('/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          user_email: currentUser.email
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        botResponse = data.response || botResponse;
-      } else {
-        console.warn('Chat API returned non-OK status:', response.status);
-      }
-    } catch (apiError) {
-      console.error('Chat API error:', apiError);
-    }
-
-    await addMessage(currentUser.email, currentChatId, 'bot', botResponse);
+    // Simulate bot response
+    setTimeout(async () => {
+      const botResponse = `Echo: ${text} (from bot)`;
+      await addMessage(currentUser.email, currentChatId, 'bot', botResponse);
+    }, 500);
   } catch (error) {
     console.error('Error sending message:', error);
     showToast('Could not send message', 'error');

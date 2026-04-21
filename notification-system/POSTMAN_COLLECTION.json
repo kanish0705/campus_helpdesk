@@ -1,0 +1,411 @@
+# Postman API Collection
+# Import this JSON into Postman to test all endpoints
+
+{
+  "info": {
+    "name": "Student-Parent Notification System",
+    "description": "Admin Panel Backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "API Information",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": [""]
+        }
+      },
+      "description": "Get API documentation and available endpoints"
+    },
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Initialize Sample Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/init-sample-data",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["init-sample-data"]
+            }
+          },
+          "description": "Initialize database with 5 sample students"
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/students",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["students"]
+            }
+          },
+          "description": "Retrieve all registered students"
+        }
+      ]
+    },
+    {
+      "name": "Attendance Management",
+      "item": [
+        {
+          "name": "Mark Attendance - Absent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"S001\",\n  \"status\": \"absent\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Mark student as absent and send SMS to parent"
+        },
+        {
+          "name": "Mark Attendance - Present",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"S002\",\n  \"status\": \"present\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Mark student as present"
+        },
+        {
+          "name": "Mark Attendance - Custom Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"S003\",\n  \"status\": \"absent\",\n  \"date\": \"2024-04-20\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Mark attendance for a specific date"
+        },
+        {
+          "name": "Get Attendance Report - All",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/attendance/report",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "report"]
+            }
+          },
+          "description": "Get all attendance records"
+        },
+        {
+          "name": "Get Attendance Report - By Student",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/attendance/report?student_id=S001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "report"],
+              "query": [
+                {
+                  "key": "student_id",
+                  "value": "S001"
+                }
+              ]
+            }
+          },
+          "description": "Get attendance records for specific student"
+        },
+        {
+          "name": "Get Attendance Report - By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/attendance/report?date=2024-04-21",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "report"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2024-04-21"
+                }
+              ]
+            }
+          },
+          "description": "Get attendance records for specific date"
+        },
+        {
+          "name": "Get Attendance Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/attendance/S001/summary",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "S001", "summary"]
+            }
+          },
+          "description": "Get attendance summary for a student (total, present, absent, percentage)"
+        }
+      ]
+    },
+    {
+      "name": "Announcements",
+      "item": [
+        {
+          "name": "Send Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Tomorrow is a holiday. School will be closed.\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/announcement/send",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["announcement", "send"]
+            }
+          },
+          "description": "Send announcement to all parents via SMS"
+        },
+        {
+          "name": "Send Announcement - Important Notice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Parent-Teacher meeting on Friday at 2 PM. Please attend.\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/announcement/send",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["announcement", "send"]
+            }
+          },
+          "description": "Send another announcement example"
+        },
+        {
+          "name": "Get Announcement History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/announcement/history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["announcement", "history"]
+            }
+          },
+          "description": "Get recent announcements (last 10)"
+        },
+        {
+          "name": "Get Announcement History - Custom Limit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/announcement/history?limit=20",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["announcement", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "description": "Get announcements with custom limit"
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "item": [
+        {
+          "name": "Missing Required Field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"S001\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Test error: missing 'status' field"
+        },
+        {
+          "name": "Invalid Student ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"INVALID\",\n  \"status\": \"absent\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Test error: invalid student ID"
+        },
+        {
+          "name": "Invalid Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"S001\",\n  \"status\": \"invalid_status\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/attendance/mark",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["attendance", "mark"]
+            }
+          },
+          "description": "Test error: invalid status (must be 'present' or 'absent')"
+        },
+        {
+          "name": "Empty Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/announcement/send",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["announcement", "send"]
+            }
+          },
+          "description": "Test error: empty announcement message"
+        }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,0 @@
-Name,Email,Roll Number,Department,Section,Sem
-Valid Student,valid.student@college.edu,24CSE401,CSE,A,4
-Missing Email,,24CSE402,CSE,A,4
-Bad Email,bad-email-format,24CSE403,CSE,B,4
-Duplicate Email,valid.student@college.edu,24CSE404,CSE,A,4
-Duplicate Roll,another.student@college.edu,24CSE401,CSE,A,4
-Missing Department,nodept.student@college.edu,24CSE405,,A,4
-Bad Semester,sem.error@college.edu,24CSE406,CSE,A,FOUR
-Out Scope Dept,ece.student@college.edu,24ECE501,ECE,B,6

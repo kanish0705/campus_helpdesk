@@ -1,0 +1,12 @@
+Column              Type        Purpose
+──────────────────────────────────────────────────────
+id                  Integer     Primary Key
+student_email       String(100) Foreign Key to users
+subject_name        String(100) Subject/Course name
+attended            Integer     Classes attended
+total               Integer     Total classes held
+threshold_target    Float       Target attendance (default 75%)
+dept                String(50)  Department
+section             String(10)  Section
+sem                 Integer     Semester
+last_updated        DateTime    Last modification

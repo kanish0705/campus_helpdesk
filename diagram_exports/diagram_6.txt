@@ -1,0 +1,12 @@
+Column              Type        Purpose
+──────────────────────────────────────────────────────
+id                  Integer     Primary Key
+title               String(200) Resource title
+description         Text        Resource description
+resource_type       String(50)  FILE or LINK
+resource_url        String(500) URL or file path
+dept                String(50)  Target department
+section             String(10)  Target section
+sem                 Integer     Target semester
+uploaded_by         String(100) Faculty/Admin who uploaded
+created_at          DateTime    Upload timestamp

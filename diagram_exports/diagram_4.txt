@@ -1,0 +1,12 @@
+Column              Type        Purpose
+──────────────────────────────────────────────────────
+id                  Integer     Primary Key
+day_of_week         String(20)  Monday, Tuesday, etc.
+period_slots        String(20)  Time range (9:00-10:00)
+subject_name        String(100) Subject name
+room_number         String(20)  Classroom/Lab location
+faculty_name        String(100) Faculty name
+resource_details    Text        Additional resources
+dept                String(50)  Department
+section             String(10)  Section
+sem                 Integer     Semester
