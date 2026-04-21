@@ -1280,7 +1280,19 @@
 console.log('🚀 Portal script initializing...');
 
 // API Configuration
-const API_BASE = window.location.origin;
+function resolveApiBase() {
+  // For local demo, backend runs on 8000. If UI is opened from another port/file, force API to 8000.
+  if (window.location.protocol === 'file:') {
+    return 'http://127.0.0.1:8000';
+  }
+  if (window.location.port !== '8000') {
+    const host = window.location.hostname || '127.0.0.1';
+    return `${window.location.protocol}//${host}:8000`;
+  }
+  return window.location.origin;
+}
+
+const API_BASE = resolveApiBase();
 let currentUser = null;
 let currentView = 'dashboard';
 let viewCache = {}; // Cache loaded view data
@@ -1339,10 +1351,28 @@ async function login() {
       body: JSON.stringify({ email, password })
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data = null;
+    let rawText = '';
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      rawText = await response.text();
+    }
     
     if (!response.ok) {
-      showToast(data.detail || 'Login failed', 'error');
+      const serverMsg = data?.detail || data?.message;
+      if (serverMsg) {
+        showToast(serverMsg, 'error');
+      } else {
+        console.error('Login non-JSON error body:', rawText.slice(0, 200));
+        showToast('Login endpoint not found. Make sure FastAPI is running on http://127.0.0.1:8000', 'error');
+      }
+      return;
+    }
+
+    if (!data) {
+      showToast('Invalid response from server. Please run backend on port 8000.', 'error');
       return;
     }
 
@@ -2925,7 +2955,7 @@ async function uploadBulkStudents() {
     formData.append('file', file);
     formData.append('admin_email', currentUser.email);
 
-    const response = await fetch(`${API_BASE}/admin/bulk-upload-students`, {
+    const response = await fetch(`${API_BASE}/admin/students/bulk-upload`, {
       method: 'POST',
       body: formData
     });
@@ -2933,7 +2963,7 @@ async function uploadBulkStudents() {
     if (!response.ok) throw new Error('Failed to upload');
     
     const data = await response.json();
-    showToast(`✅ Uploaded ${data.uploaded || 0} students!`, 'success');
+    showToast(`✅ Uploaded ${data.created_count || 0} students${data.failed_count ? `, failed ${data.failed_count}` : ''}!`, 'success');
     fileInput.value = '';
   } catch (error) {
     console.error('Error uploading bulk students:', error);
