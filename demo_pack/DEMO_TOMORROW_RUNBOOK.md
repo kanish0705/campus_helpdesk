@@ -72,7 +72,7 @@ Note: currently running in local fallback mode for demo if Firebase service key 
 
 ## 8) Parent notification panel demo sequence (port 5001)
 
-Open `http://127.0.0.1:5001`:
+Open `http://127.0.0.1: 5001`:
 1. Show students and stats.
 2. Mark attendance.
 3. Send notification.

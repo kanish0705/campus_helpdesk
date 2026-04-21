@@ -528,8 +528,14 @@ def list_to_csv(values: Optional[List[Any]]) -> Optional[str]:
 
 def get_admin_or_403(db: Session, admin_email: str):
     normalized_email = (admin_email or "").strip().strip('"').strip("'").lower()
-    admin = db.query(User).filter(func.lower(User.email) == normalized_email).first()
-    if not admin or admin.role != "ADMIN":
+    if not normalized_email:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    admin = db.query(User).filter(
+        (func.lower(User.email) == normalized_email) |
+        (func.lower(func.coalesce(User.username, "")) == normalized_email)
+    ).first()
+    if not admin or str(admin.role or "").strip().upper() != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     return admin
 

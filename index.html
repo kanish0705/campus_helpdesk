@@ -1426,8 +1426,31 @@ function showToast(message, type = 'info') {
   setTimeout(() => toast.remove(), 3000);
 }
 
+function normalizeRole(role) {
+  return String(role || '').trim().toUpperCase();
+}
+
+function isAdminUser() {
+  return !!currentUser && normalizeRole(currentUser.role) === 'ADMIN';
+}
+
 function isStudentUser() {
-  return !!currentUser && currentUser.role !== 'ADMIN';
+  return !!currentUser && !isAdminUser();
+}
+
+function getCurrentUserEmail() {
+  const email = String(currentUser?.email || '').trim();
+  if (email) return email;
+  const usernameAsEmail = String(currentUser?.username || '').trim();
+  return usernameAsEmail;
+}
+
+function getAdminEmailOrThrow() {
+  const adminEmail = getCurrentUserEmail();
+  if (!adminEmail) {
+    throw new Error('Admin identity missing. Please sign out and sign in again.');
+  }
+  return adminEmail;
 }
 
 function stopStudentRealtimeUpdates() {
@@ -1514,6 +1537,7 @@ async function login() {
     }
 
     currentUser = data;
+    currentUser.role = normalizeRole(currentUser.role);
     console.log('✅ Login successful!', currentUser);
     showToast(`Welcome ${currentUser.name}!`, 'success');
     passwordInput.value = '';
@@ -1529,7 +1553,7 @@ async function login() {
     if (sidebarUserRole) sidebarUserRole.textContent = currentUser.role;
 
     // Handle admin login
-    if (currentUser.role === 'ADMIN') {
+    if (isAdminUser()) {
       stopStudentRealtimeUpdates();
 
       // Show admin section
@@ -1691,7 +1715,7 @@ async function loadViewData(viewName) {
     loadingStates[viewName] = true;
     console.log(`📊 Loading ${viewName} data...`);
 
-    const email = currentUser.email;
+    const email = getCurrentUserEmail();
 
     switch(viewName) {
       case 'dashboard':
@@ -1752,7 +1776,7 @@ async function loadDashboard(email) {
   try {
     // Load admin dashboard if admin
     const studentDashboard = document.getElementById('studentDashboard');
-    if (currentUser?.role === 'ADMIN') {
+    if (isAdminUser()) {
       if (studentDashboard) {
         studentDashboard.innerHTML = '<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8"><h3 class="text-lg font-semibold text-gray-800 mb-4">📊 Admin Dashboard Statistics</h3><div id="adminStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"><div class="animate-pulse bg-gray-200 h-20 rounded"></div><div class="animate-pulse bg-gray-200 h-20 rounded"></div><div class="animate-pulse bg-gray-200 h-20 rounded"></div></div></div>';
       }
@@ -1920,22 +1944,52 @@ async function loadSchedule(email) {
     if (!response.ok) throw new Error('Failed to load');
     const data = await response.json();
     console.log('✅ Schedule loaded');
-    
-    const el = document.getElementById('view-schedule');
-    if (el) {
-      const container = el.querySelector('.space-y-3, .space-y-2, .grid, [class*="space"]') || el;
-      if (container && data && data.length > 0) {
-        container.innerHTML = data.map(t => `
-          <div class="p-4 bg-white border rounded-lg hover:shadow-sm transition">
-            <div class="font-semibold text-blue-600">${t.subject_name}</div>
-            <div class="text-sm text-gray-600">${t.day_of_week} - ${t.period_slots}</div>
-            <div class="text-sm text-gray-500">Room: ${t.room_number}</div>
-          </div>
-        `).join('');
-      }
+
+    const tbody = document.getElementById('timetableBody');
+    if (!tbody) return;
+
+    const entries = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.timetable)
+        ? data.timetable
+        : (Array.isArray(data?.entries) ? data.entries : []));
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No timetable entries available.</td></tr>';
+      return;
     }
+
+    const uniqueTimes = [...new Set(entries.map(e => (e.period_slots || '').trim()).filter(Boolean))];
+    const orderedTimes = uniqueTimes.sort((a, b) => a.localeCompare(b));
+
+    tbody.innerHTML = orderedTimes.map(time => {
+      const rowCells = days.map(day => {
+        const item = entries.find(e =>
+          (e.period_slots || '').trim() === time &&
+          String(e.day_of_week || '').trim().toLowerCase() === day.toLowerCase()
+        );
+
+        if (!item) {
+          return '<td class="px-4 py-3 text-sm text-gray-300">-</td>';
+        }
+
+        return `
+          <td class="px-4 py-3 text-sm align-top">
+            <div class="font-medium text-blue-700">${item.subject_name || '-'}</div>
+            <div class="text-xs text-gray-500">${item.room_number || 'TBD'}</div>
+          </td>
+        `;
+      }).join('');
+
+      return `<tr class="border-b border-gray-100"><td class="px-4 py-3 text-sm font-semibold text-gray-700">${time}</td>${rowCells}</tr>`;
+    }).join('');
   } catch (error) {
     console.error('❌ Schedule error:', error);
+    const tbody = document.getElementById('timetableBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-400">Failed to load schedule: ${error.message}</td></tr>`;
+    }
   }
 }
 
@@ -2016,15 +2070,17 @@ async function loadAttendance(email) {
 
 async function loadAnnouncements(email) {
   try {
-    const response = await fetch(`${API_BASE}/announcements`);
+    // Prefer student-scoped announcements from dashboard payload.
+    const response = await fetch(`${API_BASE}/student/dashboard?email=${encodeURIComponent(email)}`);
     if (!response.ok) throw new Error('Failed to load');
     const data = await response.json();
-    console.log('✅ Announcements loaded:', Array.isArray(data) ? data.length : 0);
+    const items = Array.isArray(data?.announcements) ? data.announcements : [];
+    console.log('✅ Announcements loaded:', items.length);
     
     const container = document.getElementById('announcementsGrid');
     if (container) {
-      if (Array.isArray(data) && data.length > 0) {
-        container.innerHTML = data.map(a => `
+      if (items.length > 0) {
+        container.innerHTML = items.map(a => `
           <div class="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg hover:shadow-md transition">
             <div class="flex items-start justify-between mb-2">
               <div class="font-semibold text-blue-900">${a.title}</div>
@@ -2060,7 +2116,7 @@ async function loadResources(email) {
     
     // Show admin upload banner for admin users
     const bannerEl = document.getElementById('adminResourceUploadBanner');
-    if (bannerEl && currentUser?.role === 'ADMIN') {
+    if (bannerEl && isAdminUser()) {
       bannerEl.classList.remove('hidden');
     }
     
@@ -2540,10 +2596,11 @@ async function loadAllTimetable() {
 
 async function loadAllAnnouncements() {
   try {
-    if (!currentUser?.email) {
+    if (!isAdminUser()) {
       showToast('User not logged in', 'error');
       return;
     }
+    const adminEmail = getAdminEmailOrThrow();
     
     const grid = document.getElementById('announcementManagementGrid');
     if (!grid) {
@@ -2554,9 +2611,9 @@ async function loadAllAnnouncements() {
     // Show loading state
     grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
     
-    console.log('📡 Fetching announcements from:', `${API_BASE}/admin/announcements?admin_email=${currentUser.email}`);
+    console.log('📡 Fetching announcements from:', `${API_BASE}/admin/announcements?admin_email=${adminEmail}`);
     
-    const response = await fetch(`${API_BASE}/admin/announcements?admin_email=${encodeURIComponent(currentUser.email)}`);
+    const response = await fetch(`${API_BASE}/admin/announcements?admin_email=${encodeURIComponent(adminEmail)}`);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -2605,10 +2662,11 @@ async function loadAllAnnouncements() {
 
 async function loadAllAttendance() {
   try {
-    if (!currentUser?.email) {
+    if (!isAdminUser()) {
       showToast('User not logged in', 'error');
       return;
     }
+    const adminEmail = getAdminEmailOrThrow();
     
     const tbody = document.getElementById('attendanceManagementBody');
     if (!tbody) {
@@ -2619,9 +2677,9 @@ async function loadAllAttendance() {
     // Show loading state
     tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
     
-    console.log('📡 Fetching attendance from:', `${API_BASE}/admin/attendance?admin_email=${currentUser.email}`);
+    console.log('📡 Fetching attendance from:', `${API_BASE}/admin/attendance?admin_email=${adminEmail}`);
     
-    const response = await fetch(`${API_BASE}/admin/attendance?admin_email=${encodeURIComponent(currentUser.email)}`);
+    const response = await fetch(`${API_BASE}/admin/attendance?admin_email=${encodeURIComponent(adminEmail)}`);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -3259,6 +3317,7 @@ async function uploadAnnouncementsExcel() {
       showToast('Only admin can upload announcements Excel', 'error');
       return;
     }
+    const adminEmail = getAdminEmailOrThrow();
 
     const input = document.getElementById('announcementExcelInput');
     const file = input?.files?.[0];
@@ -3268,7 +3327,7 @@ async function uploadAnnouncementsExcel() {
     }
 
     const formData = new FormData();
-    formData.append('admin_email', currentUser.email);
+    formData.append('admin_email', adminEmail);
     formData.append('file', file);
 
     showToast('Uploading announcements Excel...', 'info');
@@ -3299,6 +3358,7 @@ async function uploadAttendanceExcel() {
       showToast('Only admin can upload attendance Excel', 'error');
       return;
     }
+    const adminEmail = getAdminEmailOrThrow();
 
     const input = document.getElementById('attendanceExcelInput');
     const file = input?.files?.[0];
@@ -3308,7 +3368,7 @@ async function uploadAttendanceExcel() {
     }
 
     const formData = new FormData();
-    formData.append('admin_email', currentUser.email);
+    formData.append('admin_email', adminEmail);
     formData.append('file', file);
 
     showToast('Uploading attendance Excel...', 'info');
