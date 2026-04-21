@@ -1326,6 +1326,21 @@ function resolveApiBase() {
     return forcedBase.replace(/\/$/, '');
   }
 
+  // Optional global override: window.API_BASE_URL = "https://your-backend.onrender.com"
+  if (window.API_BASE_URL && typeof window.API_BASE_URL === 'string') {
+    return window.API_BASE_URL.replace(/\/$/, '');
+  }
+
+  // Optional persisted override in browser local storage
+  try {
+    const savedBase = localStorage.getItem('API_BASE_URL');
+    if (savedBase) {
+      return savedBase.replace(/\/$/, '');
+    }
+  } catch (err) {
+    // Ignore storage access errors (private mode/policy restrictions)
+  }
+
   // For local demo, backend runs on 8000.
   if (window.location.protocol === 'file:') {
     return 'http://127.0.0.1:8000';
@@ -1333,9 +1348,23 @@ function resolveApiBase() {
 
   const host = (window.location.hostname || '').toLowerCase();
   const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  const isNetlifyHost = host.endsWith('.netlify.app');
+  const isRenderHost = host.endsWith('.onrender.com');
 
   if (isLocalHost && window.location.port !== '8000') {
     return 'http://127.0.0.1:8000';
+  }
+
+  // If frontend is hosted on Netlify, default backend to same app slug on Render.
+  // Example: campus-helpdesk.netlify.app -> campus-helpdesk.onrender.com
+  if (isNetlifyHost) {
+    const appSlug = host.split('.')[0];
+    return `https://${appSlug}.onrender.com`;
+  }
+
+  // If already on Render backend/frontend origin, use same origin.
+  if (isRenderHost) {
+    return window.location.origin;
   }
 
   if (window.location.port !== '8000') {
@@ -1528,7 +1557,11 @@ async function login() {
   } catch (error) {
     console.error('❌ Error:', error);
       if (error instanceof TypeError && /fetch/i.test(error.message || '')) {
-        showToast(`Cannot reach backend at ${API_BASE}. Start FastAPI on port 8000 and try again.`, 'error');
+        if ((window.location.hostname || '').toLowerCase().endsWith('.netlify.app')) {
+          showToast(`Cannot reach backend at ${API_BASE}. Set ?apiBase=https://<your-render-app>.onrender.com in URL if your Render app uses a different name.`, 'error');
+        } else {
+          showToast(`Cannot reach backend at ${API_BASE}. Start FastAPI on port 8000 and try again.`, 'error');
+        }
         return;
       }
       showToast('Login error: ' + error.message, 'error');
