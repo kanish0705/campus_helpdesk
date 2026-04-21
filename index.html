@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="overflow-x: hidden;">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,13 +54,17 @@
             width: 100%; 
             min-height: 100vh;
             position: relative;
-            overflow-x: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
         }
         .view-content { 
             display: block; 
             width: 100%; 
             min-height: 100%;
-            overflow-x: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
         }
         .view-content.hidden { display: none !important; }
         .view-content > * { width: 100%; }
@@ -73,11 +77,15 @@
             table th, table td { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
         }
         
-        /* Prevent horizontal scrolling on all containers */
+        /* Keep layout responsive while allowing horizontal scroll when needed */
         * { box-sizing: border-box; }
-        body, html { max-width: 100vw; overflow-x: hidden; }
+        body, html { max-width: 100vw; overflow-x: auto; scroll-behavior: smooth; }
         .p-6 { box-sizing: border-box; }
         .grid { width: 100%; box-sizing: border-box; }
+
+        @media (max-width: 1024px) {
+          .table-striped { min-width: 720px; }
+        }
         
         /* Content padding responsive */
         @media (max-width: 640px) {
@@ -161,7 +169,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen overflow-x-hidden">
+<body class="bg-gray-50 min-h-screen">
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
@@ -240,6 +248,9 @@
                 <button onclick="switchView('resources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
                     <i class="fas fa-folder-open w-5"></i><span>Resources</span>
                 </button>
+                <button onclick="switchView('chat')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition" data-student-only>
+                  <i class="fas fa-robot w-5"></i><span>Chatbot</span>
+                </button>
                     
                 <!-- Admin Management Section -->
                 <div id="adminSection" class="hidden pt-4 mt-4 border-t border-gray-100">
@@ -305,6 +316,9 @@
             </button>
             <button onclick="switchView('resources')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600">
                 <i class="fas fa-folder-open text-xl mb-1"></i><span class="text-xs">Resources</span>
+            </button>
+            <button onclick="switchView('chat')" class="nav-item flex flex-col items-center py-2 px-4 text-gray-600 hover:text-primary-600" data-student-only>
+              <i class="fas fa-robot text-xl mb-1"></i><span class="text-xs">Chat</span>
             </button>
             <button onclick="logout()" class="flex flex-col items-center py-2 px-4 text-gray-600 hover:text-red-600">
                 <i class="fas fa-sign-out-alt text-xl mb-1"></i><span class="text-xs">Logout</span>
@@ -440,7 +454,7 @@
                                 <i class="fas fa-calendar-week text-primary-500 mr-2"></i>Weekly Timetable
                             </h3>
                         </div>
-                        <div class="p-6 w-full overflow-hidden">
+                        <div class="p-6 w-full overflow-x-auto">
                             <table id="weeklyTimetable" class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
@@ -543,6 +557,31 @@
                     </div>
                 </div>
 
+                <!-- Student Chat View -->
+                <div id="view-chat" class="view-content hidden">
+                  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 class="font-semibold text-gray-800">
+                        <i class="fas fa-robot text-primary-500 mr-2"></i>Student Assistant
+                      </h3>
+                      <span class="text-xs text-gray-500">Ask about attendance, timetable, announcements</span>
+                    </div>
+                    <div id="chatMessages" class="p-4 h-96 overflow-y-auto space-y-3 bg-gray-50"></div>
+                    <div class="p-4 border-t border-gray-100 bg-white flex items-center gap-2">
+                      <input
+                        id="chatInput"
+                        type="text"
+                        placeholder="Ask your question..."
+                        onkeypress="handleChatKeypress(event)"
+                        class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                      >
+                      <button id="chatSendBtn" onclick="sendChatMessage()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                        <i class="fas fa-paper-plane"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Admin: Manage Timetable -->
                 <div id="view-manage-timetable" class="view-content hidden animate-fade-in">
                     <div class="mb-4">
@@ -582,7 +621,7 @@
                                 <i class="fas fa-calendar-plus mr-2"></i>➕ ADD ENTRY
                             </button>
                         </div>
-                        <div id="timetableManagementContent" class="w-full overflow-hidden">
+                        <div id="timetableManagementContent" class="w-full overflow-x-auto">
                             <table class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
@@ -703,7 +742,7 @@
                                 <i class="fas fa-check-circle mr-2"></i>➕ ADD/UPDATE
                             </button>
                         </div>
-                        <div id="attendanceManagementContent" class="w-full overflow-hidden">
+                        <div id="attendanceManagementContent" class="w-full overflow-x-auto">
                             <table class="w-full table-striped">
                                 <thead>
                                     <tr class="bg-gray-50">
@@ -831,7 +870,7 @@
                         </div>
                         <div class="p-6">
                             <h4 class="text-sm font-semibold text-gray-700 mb-3">Generated Credentials (Current Upload)</h4>
-                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                            <div class="w-full overflow-x-auto border border-gray-100 rounded-lg">
                                 <table class="w-full table-striped">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -894,7 +933,7 @@
 
                         <!-- Users Table -->
                         <div class="p-6">
-                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                            <div class="w-full overflow-x-auto border border-gray-100 rounded-lg">
                                 <table class="w-full table-striped">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -941,7 +980,7 @@
                             </button>
                         </div>
                         <div class="p-6">
-                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                            <div class="w-full overflow-x-auto border border-gray-100 rounded-lg">
                                 <table class="w-full table-striped">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -988,7 +1027,7 @@
                             </button>
                         </div>
                         <div class="p-6">
-                            <div class="w-full overflow-hidden border border-gray-100 rounded-lg">
+                            <div class="w-full overflow-x-auto border border-gray-100 rounded-lg">
                                 <table class="w-full table-striped">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -1281,14 +1320,28 @@ console.log('🚀 Portal script initializing...');
 
 // API Configuration
 function resolveApiBase() {
-  // For local demo, backend runs on 8000. If UI is opened from another port/file, force API to 8000.
+  // Optional override: ?apiBase=http://127.0.0.1:8000
+  const forcedBase = new URLSearchParams(window.location.search).get('apiBase');
+  if (forcedBase) {
+    return forcedBase.replace(/\/$/, '');
+  }
+
+  // For local demo, backend runs on 8000.
   if (window.location.protocol === 'file:') {
     return 'http://127.0.0.1:8000';
   }
-  if (window.location.port !== '8000') {
-    const host = window.location.hostname || '127.0.0.1';
-    return `${window.location.protocol}//${host}:8000`;
+
+  const host = (window.location.hostname || '').toLowerCase();
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+
+  if (isLocalHost && window.location.port !== '8000') {
+    return 'http://127.0.0.1:8000';
   }
+
+  if (window.location.port !== '8000') {
+    return `${window.location.protocol}//${host || '127.0.0.1'}:8000`;
+  }
+
   return window.location.origin;
 }
 
@@ -1298,6 +1351,9 @@ let currentView = 'dashboard';
 let viewCache = {}; // Cache loaded view data
 let loadingStates = {}; // Track which views are loading
 let adminScope = { depts: [], sections: [], sems: [] }; // Admin scope selection
+const STUDENT_DASHBOARD_TEMPLATE = document.getElementById('studentDashboard')?.innerHTML || '';
+let studentRealtimeTimer = null;
+let isChatRequestInFlight = false;
 
 // Debounce function for performance
 function debounce(func, wait) {
@@ -1321,6 +1377,40 @@ function showToast(message, type = 'info') {
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
+}
+
+function isStudentUser() {
+  return !!currentUser && currentUser.role !== 'ADMIN';
+}
+
+function stopStudentRealtimeUpdates() {
+  if (studentRealtimeTimer) {
+    clearInterval(studentRealtimeTimer);
+    studentRealtimeTimer = null;
+  }
+}
+
+function startStudentRealtimeUpdates() {
+  stopStudentRealtimeUpdates();
+  if (!isStudentUser()) return;
+
+  // Refresh currently open student view every 30s.
+  studentRealtimeTimer = setInterval(() => {
+    refreshCurrentStudentView(true);
+  }, 30000);
+}
+
+async function refreshCurrentStudentView(silent = false) {
+  if (!isStudentUser()) return;
+
+  const liveViews = ['dashboard', 'schedule', 'attendance', 'announcements', 'resources', 'chat'];
+  if (!liveViews.includes(currentView)) return;
+
+  viewCache[currentView] = false;
+  await loadViewData(currentView);
+  if (!silent) {
+    showToast('✅ Data refreshed', 'success');
+  }
 }
 
 // LOGIN FUNCTIONS
@@ -1393,6 +1483,8 @@ async function login() {
 
     // Handle admin login
     if (currentUser.role === 'ADMIN') {
+      stopStudentRealtimeUpdates();
+
       // Show admin section
       const adminSection = document.getElementById('adminSection');
       if (adminSection) adminSection.classList.remove('hidden');
@@ -1413,6 +1505,16 @@ async function login() {
       // Hide admin section
       const adminSection = document.getElementById('adminSection');
       if (adminSection) adminSection.classList.add('hidden');
+
+      // Re-show student-only tabs when coming back from an admin session
+      const studentOnlyTabs = document.querySelectorAll('[data-student-only]');
+      studentOnlyTabs.forEach(tab => tab.classList.remove('hidden'));
+
+      // Restore student dashboard template if it was replaced by admin stats view
+      const studentDashboard = document.getElementById('studentDashboard');
+      if (studentDashboard && STUDENT_DASHBOARD_TEMPLATE && !document.getElementById('overallAttendance')) {
+        studentDashboard.innerHTML = STUDENT_DASHBOARD_TEMPLATE;
+      }
       
       // Hide admin scope button
       const adminScopeBtn = document.getElementById('adminScopeBtn');
@@ -1420,18 +1522,36 @@ async function login() {
       
       // Load dashboard
       setTimeout(() => switchView('dashboard'), 500);
+      startStudentRealtimeUpdates();
     }
     
   } catch (error) {
     console.error('❌ Error:', error);
-    showToast('Login error: ' + error.message, 'error');
+      if (error instanceof TypeError && /fetch/i.test(error.message || '')) {
+        showToast(`Cannot reach backend at ${API_BASE}. Start FastAPI on port 8000 and try again.`, 'error');
+        return;
+      }
+      showToast('Login error: ' + error.message, 'error');
   }
 }
 
 function logout() {
   console.log('🚪 Logout');
+  stopStudentRealtimeUpdates();
   currentUser = null;
   adminScope = { depts: [], sections: [], sems: [] };
+  viewCache = {};
+  loadingStates = {};
+
+  // Reset UI state so next login always starts with student-safe defaults
+  const studentOnlyTabs = document.querySelectorAll('[data-student-only]');
+  studentOnlyTabs.forEach(tab => tab.classList.remove('hidden'));
+
+  const studentDashboard = document.getElementById('studentDashboard');
+  if (studentDashboard && STUDENT_DASHBOARD_TEMPLATE) {
+    studentDashboard.innerHTML = STUDENT_DASHBOARD_TEMPLATE;
+  }
+
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginSection').classList.remove('hidden');
@@ -1473,6 +1593,7 @@ function switchView(viewName) {
   // Update page title/subtitle
   const titles = {
     'dashboard': { title: 'Dashboard', subtitle: 'Welcome back!' },
+    'chat': { title: 'Student Assistant', subtitle: 'Ask about attendance, timetable, and announcements' },
     'manage-timetable': { title: '📅 Manage Timetable', subtitle: 'Create and manage class timetables' },
     'manage-announcements': { title: '📢 Manage Announcements', subtitle: 'Create and manage college announcements' },
     'manage-attendance': { title: '📊 Manage Attendance', subtitle: 'Track student attendance' },
@@ -1536,6 +1657,9 @@ async function loadViewData(viewName) {
         break;
       case 'resources':
         await loadResources(email);
+        break;
+      case 'chat':
+        loadChatView();
         break;
       // ADMIN VIEWS
       case 'manage-timetable':
@@ -2167,10 +2291,20 @@ function saveAdminScope() {
 }
 
 function quickSync() {
-  showToast('Syncing data...', 'info');
-  setTimeout(() => {
+  if (!currentUser) {
+    showToast('Please login first', 'error');
+    return;
+  }
+
+  if (currentUser.role === 'ADMIN') {
+    viewCache = {};
+    loadingStates = {};
+    loadViewData(currentView);
     showToast('✅ Data synced!', 'success');
-  }, 1000);
+    return;
+  }
+
+  refreshCurrentStudentView(false);
 }
 
 console.log('✅ Portal ready!');
@@ -3054,7 +3188,96 @@ async function uploadAttendanceExcel() {
   }
 }
 
-// Chatbot functions removed
+// ============== CHATBOT FUNCTIONALITY ==============
+function loadChatView() {
+  const messagesContainer = document.getElementById('chatMessages');
+  if (!messagesContainer) return;
+
+  if (!messagesContainer.children.length) {
+    addChatMessage('Hi! I can help with attendance, timetable, announcements, and study planning. Ask me anything.', 'bot');
+  }
+}
+
+function handleChatKeypress(event) {
+  if (event.key === 'Enter') {
+    sendChatMessage();
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSendBtn');
+  if (!input || isChatRequestInFlight) return;
+
+  if (!isStudentUser()) {
+    showToast('Chatbot is available only for students', 'info');
+    return;
+  }
+
+  const message = input.value.trim();
+  if (!message) return;
+
+  if (!currentUser?.email) {
+    showToast('Please login to use chat', 'warning');
+    addChatMessage('Please login first, then I can help you with attendance and schedule.', 'bot');
+    return;
+  }
+
+  isChatRequestInFlight = true;
+  if (sendBtn) sendBtn.disabled = true;
+
+  addChatMessage(message, 'user');
+  input.value = '';
+
+  try {
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        user_email: currentUser.email
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Chat failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    const botReply = (data?.response || '').toString().trim();
+    if (!botReply) {
+      throw new Error('Empty response from assistant');
+    }
+
+    addChatMessage(botReply, 'bot');
+  } catch (error) {
+    console.error('Chat error:', error);
+    addChatMessage(`Sorry, I could not process that (${error.message}). Please try again.`, 'bot');
+  } finally {
+    isChatRequestInFlight = false;
+    if (sendBtn) sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+function addChatMessage(text, sender) {
+  const messagesContainer = document.getElementById('chatMessages');
+  if (!messagesContainer) return;
+
+  const messageDiv = document.createElement('div');
+  const bubble = document.createElement('div');
+  bubble.className = sender === 'user'
+    ? 'chat-bubble-user p-3 rounded-lg max-w-xl text-sm ml-auto'
+    : 'chat-bubble-bot p-3 rounded-lg max-w-xl text-sm text-gray-700 whitespace-pre-line';
+  bubble.textContent = String(text || '');
+
+  messageDiv.className = sender === 'user' ? 'flex justify-end' : 'flex justify-start';
+  messageDiv.appendChild(bubble);
+
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
 console.log('✅ Admin scope functions ready!');
 
