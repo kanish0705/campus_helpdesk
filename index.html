@@ -3215,27 +3215,120 @@ async function deleteAcademicUnit(dept, section) {
 // Upload Timetable from Excel
 async function uploadTimetableExcel() {
   try {
-    showToast('Excel upload feature coming soon', 'info');
+    if (!currentUser || currentUser.role !== 'ADMIN') {
+      showToast('Only admin can upload timetable Excel', 'error');
+      return;
+    }
+
+    const input = document.getElementById('timetableExcelInput');
+    const file = input?.files?.[0];
+    if (!file) {
+      showToast('Please select a timetable Excel file', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('admin_email', currentUser.email);
+    formData.append('file', file);
+
+    showToast('Uploading timetable Excel...', 'info');
+    const response = await fetch(`${API_BASE}/admin/timetable/upload-excel`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.detail || result.message || 'Timetable upload failed');
+    }
+
+    showToast(`✅ Timetable uploaded (${result.created || 0} entries)`, 'success');
+    input.value = '';
+    viewCache['manage-timetable'] = false;
+    await loadAllTimetable();
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Timetable upload error:', error);
+    showToast(`❌ Timetable upload failed: ${error.message}`, 'error');
   }
 }
 
 // Upload Announcements from Excel
 async function uploadAnnouncementsExcel() {
   try {
-    showToast('Excel upload feature coming soon', 'info');
+    if (!currentUser || currentUser.role !== 'ADMIN') {
+      showToast('Only admin can upload announcements Excel', 'error');
+      return;
+    }
+
+    const input = document.getElementById('announcementExcelInput');
+    const file = input?.files?.[0];
+    if (!file) {
+      showToast('Please select an announcements Excel file', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('admin_email', currentUser.email);
+    formData.append('file', file);
+
+    showToast('Uploading announcements Excel...', 'info');
+    const response = await fetch(`${API_BASE}/admin/announcements/upload-excel`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.detail || result.message || 'Announcements upload failed');
+    }
+
+    showToast(`✅ Announcements uploaded (${result.created || 0} entries)`, 'success');
+    input.value = '';
+    viewCache['manage-announcements'] = false;
+    await loadAllAnnouncements();
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Announcements upload error:', error);
+    showToast(`❌ Announcements upload failed: ${error.message}`, 'error');
   }
 }
 
 // Upload Attendance from Excel
 async function uploadAttendanceExcel() {
   try {
-    showToast('Excel upload feature coming soon', 'info');
+    if (!currentUser || currentUser.role !== 'ADMIN') {
+      showToast('Only admin can upload attendance Excel', 'error');
+      return;
+    }
+
+    const input = document.getElementById('attendanceExcelInput');
+    const file = input?.files?.[0];
+    if (!file) {
+      showToast('Please select an attendance Excel file', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('admin_email', currentUser.email);
+    formData.append('file', file);
+
+    showToast('Uploading attendance Excel...', 'info');
+    const response = await fetch(`${API_BASE}/admin/attendance/upload-excel`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.detail || result.message || 'Attendance upload failed');
+    }
+
+    showToast(`✅ Attendance uploaded (created: ${result.created || 0}, updated: ${result.updated || 0})`, 'success');
+    input.value = '';
+    viewCache['manage-attendance'] = false;
+    await loadAllAttendance();
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Attendance upload error:', error);
+    showToast(`❌ Attendance upload failed: ${error.message}`, 'error');
   }
 }
 
