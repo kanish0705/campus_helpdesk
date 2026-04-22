@@ -94,6 +94,131 @@
           opacity: 0.55;
           cursor: not-allowed;
         }
+
+        /* Login page polish */
+        #loginSection {
+          position: relative;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 20% 15%, rgba(148, 163, 184, 0.25), transparent 34%),
+            radial-gradient(circle at 82% 86%, rgba(59, 130, 246, 0.2), transparent 38%),
+            linear-gradient(140deg, #0f172a 0%, #1e3a8a 48%, #2563eb 100%);
+        }
+
+        .login-card {
+          width: min(100%, 27.5rem);
+          border-radius: 1.25rem;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 1.6rem 3rem rgba(15, 23, 42, 0.3);
+          backdrop-filter: blur(6px);
+          animation: login-card-rise 0.4s ease-out;
+        }
+
+        @keyframes login-card-rise {
+          from { opacity: 0; transform: translateY(10px) scale(0.99); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .login-title {
+          font-size: clamp(1.45rem, 2.4vw, 1.95rem);
+          letter-spacing: -0.015em;
+        }
+
+        .login-subtitle {
+          font-size: clamp(0.84rem, 1.7vw, 0.93rem);
+        }
+
+        .login-field {
+          position: relative;
+        }
+
+        .login-field .field-icon {
+          position: absolute;
+          left: 0.9rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .login-input {
+          width: 100%;
+          border: 1px solid #cbd5e1;
+          border-radius: 0.9rem;
+          background: #ffffff;
+          color: #0f172a;
+          padding: 0.78rem 0.95rem 0.78rem 2.55rem;
+          font-size: 0.94rem;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .login-input::placeholder {
+          color: #94a3b8;
+        }
+
+        .login-input:focus {
+          outline: none;
+          border-color: #2563eb;
+          box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+        }
+
+        .password-toggle-btn {
+          position: absolute;
+          right: 0.55rem;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 2rem;
+          height: 2rem;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          border-radius: 0.6rem;
+          cursor: pointer;
+          transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .password-toggle-btn:hover {
+          background: #eff6ff;
+          color: #1d4ed8;
+        }
+
+        .login-btn {
+          width: 100%;
+          border: none;
+          border-radius: 0.9rem;
+          padding: 0.85rem 1rem;
+          font-weight: 600;
+          color: #ffffff;
+          background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0ea5e9 100%);
+          box-shadow: 0 0.6rem 1.25rem rgba(37, 99, 235, 0.34);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .login-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 0.9rem 1.5rem rgba(37, 99, 235, 0.38);
+          filter: saturate(1.03);
+        }
+
+        .login-btn:disabled,
+        .login-btn.loading {
+          opacity: 0.85;
+          transform: none;
+          box-shadow: 0 0.4rem 0.9rem rgba(37, 99, 235, 0.24);
+          cursor: not-allowed;
+        }
+
+        .demo-credentials-card {
+          border-radius: 0.9rem;
+          border: 1px solid #dbeafe;
+          background: linear-gradient(135deg, #f8fbff 0%, #eff6ff 100%);
+          padding: 0.92rem 1rem;
+        }
+
+        .demo-credentials-card p {
+          margin: 0;
+        }
         
         /* Priority badges */
         .priority-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
@@ -239,8 +364,13 @@
           .text-2xl { font-size: 1.35rem !important; }
           .text-xl { font-size: 1.125rem !important; }
 
-          #loginSection .p-8 {
-            padding: 1.25rem !important;
+          #loginSection {
+            padding: 1rem !important;
+          }
+
+          #loginSection .login-card {
+            padding: 1.35rem !important;
+            border-radius: 1rem;
           }
 
           #loginSection .w-20.h-20 {
@@ -263,6 +393,22 @@
             align-items: flex-start;
           }
         }
+
+          @media (max-width: 480px) {
+            #loginSection .login-card {
+              width: 100%;
+              max-width: 100%;
+              padding: 1.1rem !important;
+            }
+
+            .login-title {
+              font-size: 1.35rem;
+            }
+
+            .login-btn {
+              padding: 0.78rem 0.95rem;
+            }
+          }
 
         @media (max-width: 420px) {
           #studentDashboard .grid.grid-cols-2 {
@@ -373,41 +519,44 @@
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <!-- Login Section -->
-    <section id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-slide-in">
+    <section id="loginSection" class="min-h-screen flex items-center justify-center p-4">
+      <div class="login-card p-8 animate-slide-in">
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-700 rounded-2xl mb-4 shadow-lg">
                     <i class="fas fa-graduation-cap text-3xl text-white"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Student Portal</h1>
-                <p class="text-gray-500 text-sm">College Management System</p>
+          <h1 class="login-title font-bold text-gray-900">Student Portal</h1>
+          <p class="login-subtitle text-slate-500 mt-1">College Management System</p>
             </div>
             
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <div class="relative">
-                        <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Email</label>
+            <div class="login-field">
+              <i class="fas fa-envelope field-icon"></i>
                         <input type="email" id="loginEmail" placeholder="student@college.edu" 
-                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition">
+                class="login-input" autocomplete="username" spellcheck="false">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <div class="relative">
-                        <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+            <div class="login-field">
+              <i class="fas fa-lock field-icon"></i>
                         <input type="password" id="loginPassword" placeholder="••••••••" onkeypress="handleLoginKeypress(event)"
-                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition">
+                class="login-input" autocomplete="current-password">
+              <button type="button" class="password-toggle-btn" onclick="toggleLoginPassword()" aria-label="Show or hide password">
+                <i id="loginPasswordToggleIcon" class="fas fa-eye"></i>
+              </button>
                     </div>
                 </div>
-                <button type="button" id="loginButton" onclick="login();" class="w-full py-3 bg-gradient-to-r from-blue-900 to-blue-700 text-white font-semibold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+          <button type="button" id="loginButton" onclick="login();" class="login-btn">
+            <span id="loginButtonIcon" class="fas fa-sign-in-alt mr-2"></span><span id="loginButtonText">Sign In</span>
                 </button>
             </div>
             
-            <div class="mt-6 p-4 bg-gray-50 rounded-xl">
-                <p class="text-xs text-gray-600 font-semibold mb-2">📌 Demo Credentials:</p>
-                <div class="text-xs text-gray-600 space-y-1">
+        <div class="demo-credentials-card mt-6">
+          <p class="text-xs text-blue-800 font-semibold mb-2">Demo Credentials</p>
+          <div class="text-xs text-blue-900 space-y-1.5 leading-relaxed">
                     <p><strong>Student:</strong> student1@college.edu / password123</p>
                     <p><strong>Admin:</strong> admin@college.edu / admin123</p>
                 </div>
@@ -1682,6 +1831,38 @@ async function refreshCurrentStudentView(silent = false) {
   }
 }
 
+function setLoginButtonLoading(isLoading) {
+  const loginButton = document.getElementById('loginButton');
+  const loginButtonIcon = document.getElementById('loginButtonIcon');
+  const loginButtonText = document.getElementById('loginButtonText');
+
+  if (!loginButton) return;
+
+  loginButton.disabled = !!isLoading;
+  loginButton.classList.toggle('loading', !!isLoading);
+
+  if (loginButtonIcon) {
+    loginButtonIcon.className = isLoading ? 'fas fa-spinner fa-spin mr-2' : 'fas fa-sign-in-alt mr-2';
+  }
+
+  if (loginButtonText) {
+    loginButtonText.textContent = isLoading ? 'Signing In...' : 'Sign In';
+  }
+}
+
+function toggleLoginPassword() {
+  const passwordInput = document.getElementById('loginPassword');
+  const toggleIcon = document.getElementById('loginPasswordToggleIcon');
+  if (!passwordInput) return;
+
+  const nextType = passwordInput.type === 'password' ? 'text' : 'password';
+  passwordInput.type = nextType;
+
+  if (toggleIcon) {
+    toggleIcon.className = nextType === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  }
+}
+
 // LOGIN FUNCTIONS
 async function login() {
   console.log('🔐 LOGIN CLICKED');
@@ -1701,6 +1882,8 @@ async function login() {
       showToast('Please enter email and password', 'error');
       return;
     }
+
+    setLoginButtonLoading(true);
 
     console.log('🔐 Sending login request...');
     
@@ -1806,6 +1989,8 @@ async function login() {
         return;
       }
       showToast('Login error: ' + error.message, 'error');
+  } finally {
+    setLoginButtonLoading(false);
   }
 }
 
