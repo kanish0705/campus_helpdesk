@@ -707,18 +707,24 @@ def ensure_sample_student_data(db: Session, user: User):
 
 
 def announcement_visible_for_user(announcement: Announcement, user: User) -> bool:
-    depts = csv_to_list(announcement.target_depts)
-    sections = csv_to_list(announcement.target_sections)
+    user_dept = (user.dept or "").strip().upper()
+    user_section = (user.section or "").strip().upper()
+    target_dept = (announcement.target_dept or "").strip().upper()
+
+    # Normalize targeting lists to support legacy mixed-case data.
+    depts = [(dept or "").strip().upper() for dept in csv_to_list(announcement.target_depts)]
+    sections = [(section or "").strip().upper() for section in csv_to_list(announcement.target_sections)]
     semesters = int_csv_to_list(announcement.target_semesters)
 
-    if announcement.target_dept == "ALL" and not depts and not sections and not semesters:
+    # Legacy rows may have an empty target_dept but still be global announcements.
+    if target_dept in ["", "ALL"] and not depts and not sections and not semesters:
         return True
 
-    dept_match = (announcement.target_dept == "ALL") or (announcement.target_dept == user.dept)
+    dept_match = (target_dept in ["", "ALL"]) or (target_dept == user_dept)
     if depts:
-        dept_match = user.dept in depts
+        dept_match = user_dept in depts
 
-    section_match = True if not sections else (user.section in sections)
+    section_match = True if not sections else (user_section in sections)
     semester_match = True if not semesters else (user.sem in semesters)
 
     return dept_match and section_match and semester_match
