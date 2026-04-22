@@ -38,6 +38,62 @@
         /* Chat bubble styling */
         .chat-bubble-bot { background: #f1f5f9; border-bottom-left-radius: 4px; }
         .chat-bubble-user { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border-bottom-right-radius: 4px; }
+
+        /* Chat layout + controls */
+        .chat-shell {
+          display: flex;
+          flex-direction: column;
+          min-height: min(70vh, 44rem);
+        }
+
+        .chat-header {
+          flex-shrink: 0;
+        }
+
+        .chat-messages {
+          flex: 1 1 auto;
+          min-height: 16rem;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+
+        .chat-input-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-shrink: 0;
+          position: sticky;
+          bottom: 0;
+          z-index: 5;
+          background: #ffffff;
+        }
+
+        .chat-input {
+          flex: 1 1 auto;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .chat-send-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 2.75rem;
+          min-height: 2.5rem;
+          background: #2563eb;
+          color: #ffffff;
+          border: 1px solid #1d4ed8;
+          cursor: pointer;
+        }
+
+        .chat-send-btn:hover {
+          background: #1d4ed8;
+        }
+
+        .chat-send-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
         
         /* Priority badges */
         .priority-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
@@ -122,9 +178,12 @@
             height: 9rem;
             font-size: 2rem;
           }
-          #chatMessages {
-            height: 60vh !important;
-            min-height: 16rem;
+          .chat-shell {
+            min-height: 64vh;
+          }
+
+          .chat-messages {
+            max-height: 56vh;
           }
         }
 
@@ -699,23 +758,22 @@
 
                 <!-- Student Chat View -->
                 <div id="view-chat" class="view-content hidden">
-                  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                  <div class="chat-shell bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="chat-header p-4 border-b border-gray-100 flex items-center justify-between">
                       <h3 class="font-semibold text-gray-800">
                         <i class="fas fa-robot text-primary-500 mr-2"></i>Student Assistant
                       </h3>
                       <span class="text-xs text-gray-500">Ask about attendance, timetable, announcements</span>
                     </div>
-                    <div id="chatMessages" class="p-4 h-96 overflow-y-auto space-y-3 bg-gray-50"></div>
-                    <div class="p-4 border-t border-gray-100 bg-white flex items-center gap-2">
+                    <div id="chatMessages" class="chat-messages p-4 space-y-3 bg-gray-50"></div>
+                    <div class="chat-input-row p-4 border-t border-gray-100">
                       <input
                         id="chatInput"
                         type="text"
                         placeholder="Ask your question..."
-                        onkeypress="handleChatKeypress(event)"
-                        class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                        class="chat-input px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       >
-                      <button id="chatSendBtn" onclick="sendChatMessage()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                      <button id="chatSendBtn" type="button" class="chat-send-btn px-4 py-2 rounded-lg transition" aria-label="Send message">
                         <i class="fas fa-paper-plane"></i>
                       </button>
                     </div>
@@ -3681,7 +3739,8 @@ function loadChatView() {
 }
 
 function handleChatKeypress(event) {
-  if (event.key === 'Enter') {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
     sendChatMessage();
   }
 }
@@ -3691,13 +3750,13 @@ async function sendChatMessage() {
   const sendBtn = document.getElementById('chatSendBtn');
   if (!input || isChatRequestInFlight) return;
 
-  if (!isStudentUser()) {
-    showToast('Chatbot is available only for students', 'info');
-    return;
-  }
-
   const message = input.value.trim();
   if (!message) return;
+
+  console.log('[Chat] Sending message:', message);
+  addChatMessage(message, 'user');
+  input.value = '';
+  input.focus();
 
   if (!currentUser?.email) {
     showToast('Please login to use chat', 'warning');
@@ -3707,9 +3766,6 @@ async function sendChatMessage() {
 
   isChatRequestInFlight = true;
   if (sendBtn) sendBtn.disabled = true;
-
-  addChatMessage(message, 'user');
-  input.value = '';
 
   try {
     const response = await fetch(`${API_BASE}/chat`, {
@@ -3743,6 +3799,21 @@ async function sendChatMessage() {
   }
 }
 
+function initializeChatUi() {
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSendBtn');
+
+  if (sendBtn && !sendBtn.dataset.bound) {
+    sendBtn.addEventListener('click', sendChatMessage);
+    sendBtn.dataset.bound = 'true';
+  }
+
+  if (input && !input.dataset.bound) {
+    input.addEventListener('keydown', handleChatKeypress);
+    input.dataset.bound = 'true';
+  }
+}
+
 function addChatMessage(text, sender) {
   const messagesContainer = document.getElementById('chatMessages');
   if (!messagesContainer) return;
@@ -3762,6 +3833,7 @@ function addChatMessage(text, sender) {
 }
 
 initializeSidebarToggle();
+initializeChatUi();
 syncViewportHeight();
 window.addEventListener('resize', debounce(syncViewportHeight, 120));
 window.addEventListener('orientationchange', syncViewportHeight);
